@@ -9,6 +9,8 @@ export function SidebarLinks(props) {
   let location = useLocation();
 
   const { routes } = props;
+  const userString = localStorage.getItem("user");
+  const user = JSON.parse(userString);
 
   // verifies if routeName is the one active (in browser input)
   const activeRoute = (routeName) => {
@@ -18,9 +20,10 @@ export function SidebarLinks(props) {
   const createLinks = (routes) => {
     return routes.map((route, index) => {
       if (
-        route.layout === "/admin" ||
-        route.layout === "/auth" ||
-        route.layout === "/rtl"
+        (route.layout === "/admin" ||
+          route.layout === "/auth" ||
+          route.layout === "/rtl") &&
+        (!route.role || route.role === user.role)
       ) {
         return (
           <Link key={index} to={route.layout + "/" + route.path}>
@@ -57,6 +60,7 @@ export function SidebarLinks(props) {
       }
     });
   };
+
   // BRAND
   return createLinks(routes);
 }

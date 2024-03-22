@@ -1,136 +1,244 @@
-import Banner from "./components/Banner";
-import NFt2 from "assets/img/nfts/Nft2.png";
-import NFt4 from "assets/img/nfts/Nft4.png";
-import NFt3 from "assets/img/nfts/Nft3.png";
-import NFt5 from "assets/img/nfts/Nft5.png";
-import NFt6 from "assets/img/nfts/Nft6.png";
-import avatar1 from "assets/img/avatars/avatar1.png";
-import avatar2 from "assets/img/avatars/avatar2.png";
-import avatar3 from "assets/img/avatars/avatar3.png";
-
-import tableDataTopCreators from "views/admin/marketplace/variables/tableDataTopCreators.json";
-import { tableColumnsTopCreators } from "views/admin/marketplace/variables/tableColumnsTopCreators";
-import HistoryCard from "./components/HistoryCard";
-import TopCreatorTable from "./components/TableTopCreators";
-import NftCard from "components/card/NftCard";
-
+import React, { useState, useEffect } from "react";
+import { Table, Button } from "antd";
+import axios from "axios";
+import * as XLSX from "xlsx"; // Import all exports from 'xlsx'
 const Marketplace = () => {
+  const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+
+  const getData = async () => {
+    try {
+      const res = await axios.get("http://localhost:8800/api/bookings");
+      const modifiedData = res.data.map((item) => {
+        const { createdAt, updatedAt, __v, username, ...rest } = item;
+        return rest;
+      });
+      setData(modifiedData);
+      setFilteredData(modifiedData); // Set both data and filteredData after fetch
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  useEffect(() => {
+    getData(); // Gọi ngay lần đầu để không phải chờ
+    const intervalId = setInterval(() => {
+      getData(); // Tiếp tục cập nhật mỗi 5 giây
+    }, 5000);
+    return () => clearInterval(intervalId); // Dọn dẹp
+  }, []);
+
+  const formatDate = (text) => {
+    const date = new Date(text);
+    return new Intl.DateTimeFormat("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    }).format(date);
+  };
+
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
+
+  const columns = [
+    {
+      title: "Ngày",
+      dataIndex: "date",
+      key: "date",
+      filters: Array.from(new Set(data.map((item) => item.date))).map(
+        (date) => ({
+          text: date,
+          value: date,
+        })
+      ),
+      onFilter: (value, record) => record.date === value,
+    },
+    {
+      title: "Nhân viên",
+      dataIndex: "name",
+      key: "name",
+      filters: Array.from(new Set(data.map((item) => item.name))).map(
+        (name) => ({
+          text: name,
+          value: name,
+        })
+      ),
+      onFilter: (value, record) => record.name === value,
+    },
+    {
+      title: "Mã vé",
+      dataIndex: "ticketCode",
+      key: "ticketCode",
+    },
+    {
+      title: "Ngày đi",
+      dataIndex: "dateGo",
+      key: "dateGo",
+      filters: Array.from(new Set(data.map((item) => item.dateGo))).map(
+        (dateGo) => ({
+          text: dateGo,
+          value: dateGo,
+        })
+      ),
+      onFilter: (value, record) => record.dateGo === value,
+    },
+    {
+      title: "Nguồn đặt vé",
+      dataIndex: "bookingSource",
+      key: "bookingSource",
+      filters: Array.from(new Set(data.map((item) => item.bookingSource))).map(
+        (bookingSource) => ({
+          text: bookingSource,
+          value: bookingSource,
+        })
+      ),
+      onFilter: (value, record) => record.bookingSource === value,
+    },
+    {
+      title: "Thời gian khởi hành",
+      dataIndex: "timeStart",
+      key: "timeStart",
+    },
+    {
+      title: "Tên khách hàng",
+      dataIndex: "customerName",
+      key: "customerName",
+    },
+    {
+      title: "Số điện thoại",
+      dataIndex: "phoneNumber",
+      key: "phoneNumber",
+      filters: Array.from(new Set(data.map((item) => item.phoneNumber))).map(
+        (phoneNumber) => ({
+          text: phoneNumber,
+          value: phoneNumber,
+        })
+      ),
+      onFilter: (value, record) => record.phoneNumber === value,
+    },
+    {
+      title: "Chuyến đi",
+      dataIndex: "trip",
+      key: "trip",
+      filters: Array.from(new Set(data.map((item) => item.trip))).map(
+        (trip) => ({
+          text: trip,
+          value: trip,
+        })
+      ),
+      onFilter: (value, record) => record.trip === value,
+    },
+    {
+      title: "Hãng xe",
+      dataIndex: "busCompany",
+      key: "busCompany",
+      filters: Array.from(new Set(data.map((item) => item.busCompany))).map(
+        (busCompany) => ({
+          text: busCompany,
+          value: busCompany,
+        })
+      ),
+      onFilter: (value, record) => record.busCompany === value,
+    },
+    {
+      title: "Số lượng vé",
+      dataIndex: "quantity",
+      key: "quantity",
+    },
+    {
+      title: "Giá vé",
+      dataIndex: "ticketPrice",
+      key: "ticketPrice",
+      render: formatCurrency,
+    },
+    {
+      title: "Tổng tiền",
+      dataIndex: "total",
+      key: "total",
+      render: formatCurrency,
+    },
+    {
+      title: "Thanh toán",
+      dataIndex: "isPayment",
+      key: "isPayment",
+      render: (text) => (text ? "Đã thanh toán" : "Chưa thanh toán"),
+    },
+    {
+      title: "Đã gửi ZNS",
+      dataIndex: "isSendZNS",
+      key: "isSendZNS",
+      render: (text) => (text ? "Đã gửi ZNS" : "Chưa gửi ZNS"),
+    },
+    {
+      title: "Tiền chuyển khoản",
+      dataIndex: "transfer",
+      key: "transfer",
+      render: formatCurrency,
+    },
+    {
+      title: "Tiền mặt",
+      dataIndex: "cash",
+      key: "cash",
+      render: formatCurrency,
+    },
+    {
+      title: "Nhà xe nhận",
+      dataIndex: "garageCollection",
+      key: "garageCollection",
+      render: formatCurrency,
+    },
+    {
+      title: "Còn lại",
+      dataIndex: "remaining",
+      key: "remaining",
+      render: formatCurrency,
+    },
+  ];
+  const handleFilter = (pagination, filters, sorter) => {
+    let newData = [...data];
+
+    Object.keys(filters).forEach((key) => {
+      const value = filters[key] || [];
+      if (value.length > 0) {
+        newData = newData.filter((item) => {
+          return value.includes(item[key]);
+        });
+      }
+    });
+
+    setFilteredData(newData);
+  };
+
+  const clearFilters = () => {
+    setFilteredData(data);
+  };
+
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(filteredData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+    XLSX.writeFile(workbook, "bookings.xlsx");
+  };
+
   return (
-    <div className="mt-3 grid h-full grid-cols-1 gap-5 xl:grid-cols-2 2xl:grid-cols-3">
-      <div className="col-span-1 h-fit w-full xl:col-span-1 2xl:col-span-2">
-        {/* NFt Banner */}
-        <Banner />
-
-        {/* NFt Header */}
-        <div className="mb-4 mt-5 flex flex-col justify-between px-4 md:flex-row md:items-center">
-          <h4 className="ml-1 text-2xl font-bold text-navy-700 dark:text-white">
-            Trending NFTs
-          </h4>
-          <ul className="mt-4 flex items-center justify-between md:mt-0 md:justify-center md:!gap-5 2xl:!gap-12">
-            <li>
-              <a
-                className="text-base font-medium text-brand-500 hover:text-brand-500 dark:text-white"
-                href=" "
-              >
-                Art
-              </a>
-            </li>
-            <li>
-              <a
-                className="text-base font-medium text-brand-500 hover:text-brand-500 dark:text-white"
-                href=" "
-              >
-                Music
-              </a>
-            </li>
-            <li>
-              <a
-                className="text-base font-medium text-brand-500 hover:text-brand-500 dark:text-white"
-                href=" "
-              >
-                Collection
-              </a>
-            </li>
-            <li>
-              <a
-                className="text-base font-medium text-brand-500 hover:text-brand-500 dark:text-white"
-                href=" "
-              >
-                <a href=" ">Sports</a>
-              </a>
-            </li>
-          </ul>
-        </div>
-
-        {/* NFTs trending card */}
-        <div className="z-20 grid grid-cols-1 gap-5 md:grid-cols-3">
-          <NftCard
-            bidders={[avatar1, avatar2, avatar3]}
-            title="Abstract Colors"
-            author="Esthera Jackson"
-            price="0.91"
-            image={NFt3}
-          />
-          <NftCard
-            bidders={[avatar1, avatar2, avatar3]}
-            title="ETH AI Brain"
-            author="Nick Wilson"
-            price="0.7"
-            image={NFt2}
-          />
-          <NftCard
-            bidders={[avatar1, avatar2, avatar3]}
-            title="Mesh Gradients"
-            author="Will Smith"
-            price="2.91"
-            image={NFt4}
-          />
-        </div>
-
-        {/* Recenlty Added setion */}
-        <div className="mb-5 mt-5 flex items-center justify-between px-[26px]">
-          <h4 className="text-2xl font-bold text-navy-700 dark:text-white">
-            Recently Added
-          </h4>
-        </div>
-
-        {/* Recently Add NFTs */}
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          <NftCard
-            bidders={[avatar1, avatar2, avatar3]}
-            title="Abstract Colors"
-            author="Esthera Jackson"
-            price="0.91"
-            image={NFt4}
-          />
-          <NftCard
-            bidders={[avatar1, avatar2, avatar3]}
-            title="ETH AI Brain"
-            author="Nick Wilson"
-            price="0.7"
-            image={NFt5}
-          />
-          <NftCard
-            bidders={[avatar1, avatar2, avatar3]}
-            title="Mesh Gradients"
-            author="Will Smith"
-            price="2.91"
-            image={NFt6}
-          />
-        </div>
+    <>
+      <div className="flex items-center justify-between">
+        <h1>BẢNG TẤT CẢ ĐƠN BOOKING</h1>
+        <Button type="primary" onClick={exportToExcel}>
+          Xuất Excel
+        </Button>
       </div>
-
-      {/* right side section */}
-
-      <div className="col-span-1 h-full w-full rounded-xl 2xl:col-span-1">
-        <TopCreatorTable
-          extra="mb-5"
-          tableData={tableDataTopCreators}
-          columnsData={tableColumnsTopCreators}
-        />
-        <HistoryCard />
-      </div>
-    </div>
+      <Table
+        columns={columns}
+        dataSource={filteredData} // Use filteredData instead of data here
+        scroll={{ x: "max-content" }}
+        onChange={handleFilter}
+        onFilterDropdownVisibleChange={clearFilters}
+      />
+    </>
   );
 };
 

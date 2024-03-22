@@ -1,41 +1,94 @@
-import Banner from "./components/Banner";
-import General from "./components/General";
-import Notification from "./components/Notification";
-import Project from "./components/Project";
-import Storage from "./components/Storage";
-import Upload from "./components/Upload";
+import { useEffect, useState } from "react";
+import { MdExitToApp } from "react-icons/md";
+import axios from "axios";
 
 const ProfileOverview = () => {
+  const userString = localStorage.getItem("user");
+  const user = JSON.parse(userString);
+  const id = user._id;
+
+  const [dataUser, setdataUser] = useState();
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:8800/api/users/${id}`
+        );
+        setdataUser(response.data); // Cập nhật trạng thái với dữ liệu người dùng
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        // Xử lý lỗi ở đây, ví dụ: thông báo cho người dùng, cập nhật trạng thái, v.v...
+      }
+    };
+    getData();
+  }, [id]);
+  const logOut = () => {
+    localStorage.removeItem("user");
+    alert("Bạn đã đăng xuất");
+    window.location.href = "/login";
+  };
+
   return (
-    <div className="flex w-full flex-col gap-5">
-      <div className="w-ful mt-3 flex h-fit flex-col gap-5 lg:grid lg:grid-cols-12">
-        <div className="col-span-4 lg:!mb-0">
-          <Banner />
+    <>
+      <div className="navbar-top">
+        <div className="title-profile">
+          <h1>Profile</h1>
         </div>
 
-        <div className="col-span-3 lg:!mb-0">
-          <Storage />
-        </div>
+        <ul>
+          <li>
+            <button onClick={() => logOut()}>
+              <MdExitToApp className="h-8 w-8" />
+            </button>
+          </li>
+        </ul>
+      </div>
 
-        <div className="z-0 col-span-5 lg:!mb-0">
-          <Upload />
+      <div className="main">
+        <h2>Thông tin chi tiết</h2>
+        <div className="card">
+          <div className="card-body">
+            <i className="fa fa-pen fa-xs edit"></i>
+            <table>
+              {dataUser && (
+                <tbody>
+                  <tr>
+                    <td>Họ và tên</td>
+                    <td>:</td>
+                    <td>{dataUser.name}</td>
+                  </tr>
+                  <tr>
+                    <td>Chức vụ</td>
+                    <td>:</td>
+                    <td>
+                      {dataUser.role == "admin"
+                        ? "Quản trị viên"
+                        : dataUser.role == "mkt"
+                        ? "Nhân viên Marketing"
+                        : "Nhân viên Sale"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Tên tài khoản</td>
+                    <td>:</td>
+                    <td>{dataUser.username}</td>
+                  </tr>
+                  <tr>
+                    <td>Mật khẩu</td>
+                    <td>:</td>
+                    <td>
+                      <button className="rounded-md bg-[#ffff00] p-2">
+                        Quên mật khẩu
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              )}
+            </table>
+          </div>
         </div>
       </div>
-      {/* all project & ... */}
-
-      <div className="grid h-full grid-cols-1 gap-5 lg:!grid-cols-12">
-        <div className="col-span-5 lg:col-span-6 lg:mb-0 3xl:col-span-4">
-          <Project />
-        </div>
-        <div className="col-span-5 lg:col-span-6 lg:mb-0 3xl:col-span-5">
-          <General />
-        </div>
-
-        <div className="col-span-5 lg:col-span-12 lg:mb-0 3xl:!col-span-3">
-          <Notification />
-        </div>
-      </div>
-    </div>
+    </>
   );
 };
 
