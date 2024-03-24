@@ -14,6 +14,7 @@ import {
 import axios from "axios";
 import dayjs from "dayjs";
 import moment from "moment";
+import numeral from "numeral";
 
 const Tables = () => {
   const today = new Date();
@@ -23,7 +24,7 @@ const Tables = () => {
   const [month, setMonth] = useState(initialMonth.toString());
   const [year, setYear] = useState(initialYear.toString());
   const [dataBooking, setDataBooking] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
@@ -31,10 +32,13 @@ const Tables = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedRefundId, setSelectedRefundId] = useState(null);
   const [currentMonthYear, setCurrentMonthYear] = useState(moment());
+
   const userString = localStorage.getItem("user");
   const user = JSON.parse(userString);
   const id = user._id;
   const name = user.name;
+
+  const { TextArea } = Input;
 
   const showModal = () => {
     form.resetFields();
@@ -235,6 +239,11 @@ const Tables = () => {
       onFilter: (value, record) => record.busCompany === value,
     },
     {
+      title: "Số ghế",
+      dataIndex: "seats",
+      key: "seats",
+    },
+    {
       title: "Chuyến đi",
       dataIndex: "trip",
       key: "trip",
@@ -245,6 +254,26 @@ const Tables = () => {
         })
       ),
       onFilter: (value, record) => record.trip === value,
+    },
+    {
+      title: "Điểm đón",
+      dataIndex: "pickuplocation",
+      key: "pickuplocation",
+    },
+    {
+      title: "Điểm trả",
+      dataIndex: "paylocation",
+      key: "paylocation",
+    },
+    {
+      title: "Cọc tiền",
+      dataIndex: "deposit",
+      key: "deposit",
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "note",
+      key: "note",
     },
     {
       title: "Giờ đi",
@@ -362,13 +391,6 @@ const Tables = () => {
     form.setFieldsValue({ total });
   };
 
-  const handlePriceChange = (e) => {
-    const ticketPrice = parseFloat(e.target.value); // Chuyển đổi sang kiểu số thực
-    const quantity = parseInt(form.getFieldValue("quantity")); // Chuyển đổi sang kiểu số nguyên
-    const total = quantity * ticketPrice;
-    form.setFieldsValue({ total });
-  };
-
   const calculateRemaining = () => {
     const total = parseFloat(form.getFieldValue("total") || 0);
     const cash = parseFloat(form.getFieldValue("cash") || 0);
@@ -383,19 +405,22 @@ const Tables = () => {
 
   const onFinish = async (values) => {
     try {
-      console.log("Date:", values.date);
-      console.log("DateGo:", values.dateGo);
-
-      // Chuyển đổi kiểu dữ liệu của trường total và quantity
       values.date = dayjs(values.date).format("YYYY-MM-DD");
       values.dateGo = dayjs(values.dateGo).format("YYYY-MM-DD");
-      values.total = parseInt(values.total);
-      values.quantity = parseInt(values.quantity);
-      // Chuyển đổi kiểu dữ liệu của giá vé sang số
-      values.ticketPrice = parseFloat(values.ticketPrice);
-
+      values.customerName = values.customerName.toUpperCase();
+      // Chuyển đổi các giá trị số từ chuỗi đã format sang số
+      values.quantity = numeral(values.quantity).value();
+      values.total = numeral(values.total).value();
+      values.transfer = numeral(values.transfer).value();
+      values.cash = numeral(values.cash).value();
+      values.garageCollection = numeral(values.garageCollection).value();
+      values.ticketPrice = numeral(values.ticketPrice).value();
+      // Đảm bảo rằng 'remaining' cũng được chuyển đổi nếu nó tồn tại trong form
+      if (values.remaining) {
+        values.remaining = numeral(values.remaining).value();
+      }
       const token = localStorage.getItem("token"); // Lấy token từ localStorage
-
+      console.log(values);
       // Gửi dữ liệu đặt vé lên máy chủ
       const response = await axios.post(
         "http://localhost:8800/api/bookings/create",
@@ -545,8 +570,101 @@ const Tables = () => {
     return totals;
   };
 
-  // Trong phần return của component, trước khi render <Table>...
   const totals = calculateTotals();
+  const locationsByBusCompany = {
+    AA: [
+      "Văn phòng SG: 526 An Dương Vương, P9, Quận 5, HCM",
+      "Văn phòng SG: 116 QL13, P26, Bình Thạnh, HCM",
+      "Văn phòng DL: 4C Yersin, Phường 10, TP Đà Lạt",
+    ],
+    LV: [
+      "Văn phòng: 332 An Dương Vương, P9, Quận 5, HCM",
+      "Văn phòng: 152 Chu Văn An, P26, Bình Thạnh HCM",
+      "Văn phòng: 14 Đống Đa, Phường 3, TP Đà Lạt",
+    ],
+    LH: ["D11 KQH Hoàng Diệu, Phường 5, TP Đà Lạt"],
+    TQĐ: [
+      "Bến xe An Sương, QL22, Hóc Môn, HCM",
+      "263 Mai Anh Đào, Phường 8, TP Đà Lạt",
+      "",
+    ],
+    PP: [
+      "20C đường 3/4, Phường 3, TP Đà Lạt",
+      "522 Hoàng Văn Thụ, P4, Quận Tân Bình, HCM",
+      "4 Nguyễn Ái Quốc, Phường Quang Vinh, TP Biên Hoà",
+    ],
+    KT: ["16 Phan Chu Trinh, Phường 9, TP Đà Lạt"],
+  };
+  const dropOffLocationsByBusCompany = {
+    AA: [
+      "526 An Dương Vương, P9, Quận 5, HCM",
+      "116 QL13, P26, Bình Thạnh, HCM",
+      "4C Yersin, Phường 10, TP Đà Lạt",
+    ],
+    LV: [
+      "332 An Dương Vương, P9, Quận 5, HCM",
+      "152 Chu Văn An, P26, Bình Thạnh HCM",
+      "14 Đống Đa, Phường 3, TP Đà Lạt",
+    ],
+    LH: ["D11 KQH Hoàng Diệu, Phường 5, TP Đà Lạt"],
+    TQĐ: [
+      "Bến xe An Sương, QL22, Hóc Môn, HCM",
+      "263 Mai Anh Đào, Phường 8, TP Đà Lạt",
+    ],
+    PP: [
+      "20C đường 3/4, Phường 3, TP Đà Lạt",
+      "522 Hoàng Văn Thụ, P4, Quận Tân Bình, HCM",
+      "4 Nguyễn Ái Quốc, Phường Quang Vinh, TP Biên Hoà",
+    ],
+    KT: ["16 Phan Chu Trinh, Phường 9, TP Đà Lạt"],
+  };
+  const [pickLocations, setPickLocations] = useState([]);
+  const [dropOffLocations, setDropOffLocations] = useState([]);
+  const [formattedTicketPrice, setFormattedTicketPrice] = useState("");
+  // State để lưu giá trị thực sự (số) để xử lý logic hoặc gửi lên server
+
+  const handleBusCompanyChange = (value) => {
+    console.log("Selected bus company:", value);
+    const pickLocations = locationsByBusCompany[value] || [];
+    console.log("Pickup locations:", pickLocations);
+    setPickLocations(pickLocations);
+    const dropOffLocations = dropOffLocationsByBusCompany[value] || [];
+    console.log("Drop-off locations:", dropOffLocations);
+    setDropOffLocations(dropOffLocations);
+  };
+
+  const handleValueChange = (_, allValues) => {
+    const { ticketPrice, quantity, transfer, cash, garageCollection } =
+      allValues;
+
+    // Format và cập nhật giá trị đơn giá và số lượng
+    const formattedPrice = numeral(ticketPrice).format("0,0");
+    const formattedQuantity = numeral(quantity).format("0,0");
+    const totalPrice = numeral(ticketPrice).value() * numeral(quantity).value();
+
+    // Tính toán và format cho các trường thanh toán
+    const formattedTransfer = numeral(transfer).format("0,0");
+    const formattedCash = numeral(cash).format("0,0");
+    const formattedGarageCollection = numeral(garageCollection).format("0,0");
+
+    // Tính toán còn lại
+    const remaining =
+      totalPrice -
+      (numeral(transfer).value() +
+        numeral(cash).value() +
+        numeral(garageCollection).value());
+
+    form.setFieldsValue({
+      ticketPrice: formattedPrice,
+      quantity: formattedQuantity,
+      total: numeral(totalPrice).format("0,0"),
+      transfer: formattedTransfer,
+      cash: formattedCash,
+      garageCollection: formattedGarageCollection,
+      remaining: numeral(remaining).format("0,0"), // Cập nhật giá trị còn lại
+    });
+  };
+
   return (
     <>
       <div className="flex items-center justify-between py-4">
@@ -587,26 +705,31 @@ const Tables = () => {
             <Table.Summary.Cell index={6}></Table.Summary.Cell>
             <Table.Summary.Cell index={7}></Table.Summary.Cell>
             <Table.Summary.Cell index={8}></Table.Summary.Cell>
-            <Table.Summary.Cell index={9}>
+            <Table.Summary.Cell index={9}></Table.Summary.Cell>
+            <Table.Summary.Cell index={10}></Table.Summary.Cell>
+            <Table.Summary.Cell index={11}></Table.Summary.Cell>
+            <Table.Summary.Cell index={12}></Table.Summary.Cell>
+            <Table.Summary.Cell index={13}></Table.Summary.Cell>
+            <Table.Summary.Cell index={14}>
               {formatCurrency(totals.ticketPrice)}
             </Table.Summary.Cell>
 
-            <Table.Summary.Cell index={10}>
+            <Table.Summary.Cell index={15}>
               {totals.quantity}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={11}>
+            <Table.Summary.Cell index={16}>
               {formatCurrency(totals.total)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={12}>
+            <Table.Summary.Cell index={17}>
               {formatCurrency(totals.cash)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={13}>
+            <Table.Summary.Cell index={18}>
               {formatCurrency(totals.transfer)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={14}>
+            <Table.Summary.Cell index={19}>
               {formatCurrency(totals.garageCollection)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={15}>
+            <Table.Summary.Cell index={20}>
               {formatCurrency(totals.remaining)}
             </Table.Summary.Cell>
           </Table.Summary.Row>
@@ -650,7 +773,12 @@ const Tables = () => {
         footer={null}
         width={800}
       >
-        <Form form={form} onFinish={onFinish} layout="vertical">
+        <Form
+          form={form}
+          onFinish={onFinish}
+          onValuesChange={handleValueChange}
+          layout="vertical"
+        >
           <Row gutter={[16, 16]}>
             <Col span={8}>
               <Form.Item name="date" label="Ngày đặt">
@@ -702,45 +830,93 @@ const Tables = () => {
             </Col>
             <Col span={8}>
               <Form.Item name="trip" label="Chuyến đi">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="busCompany" label="Hãng xe">
                 <Select style={{ width: "100%" }}>
-                  <Option value="AA">AA</Option>
-                  <Option value="LV">LV</Option>
-                  <Option value="ĐL">ĐL</Option>
-                  <Option value="LH">LH</Option>
-                  <Option value="TQĐ">TQĐ</Option>
-                  <Option value="NK">NK</Option>
-                  <Option value="NXM">NXM</Option>
+                  <Option value="Sài Gòn - Đà Lạt">Sài Gòn - Đà Lạt</Option>
+                  <Option value="Vũng Tàu - Đà Lạt">Vũng Tàu - Đà Lạt</Option>
+                  <Option value="Bình Dương - Đà Lạt">
+                    Bình Dương - Đà Lạt
+                  </Option>
+                  <Option value="Nha Trang - Đà Lạt">Nha Trang - Đà Lạt</Option>
+                  <Option value="Nha Trang - Sài Gòn">
+                    Nha Trang - Sài Gòn
+                  </Option>
+                  <Option value="Đà Lạt - Sài Gòn">Đà Lạt - Sài Gòn</Option>
+                  <Option value="Đà Lạt - Vũng Tàu">Đà Lạt - Vũng Tàu</Option>
+                  <Option value="Đà Lạt - Bình Dương">
+                    Đà Lạt - Bình Dương
+                  </Option>
+                  <Option value="Đà Lạt - Nha Trang">Đà Lạt - Nha Trang</Option>
+                  <Option value="Sài Gòn - Nha Trang">
+                    Sài Gòn - Nha Trang
+                  </Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
+              <Form.Item name="busCompany" label="Hãng xe">
+                <Select
+                  onChange={handleBusCompanyChange}
+                  style={{ width: "100%" }}
+                >
+                  <Option value="AA">AA</Option>
+                  <Option value="LV">LV</Option>
+                  <Option value="LH">LH</Option>
+                  <Option value="TQĐ">TQĐ</Option>
+                  <Option value="PP">PP</Option>
+                  <Option value="KT">KT</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="seats" label="Số Ghế">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
               <Form.Item name="ticketPrice" label="Đơn giá">
-                <Input onChange={handlePriceChange} />
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="pickuplocation" label="Địa điểm đón">
+                <Select style={{ width: "100%" }}>
+                  {pickLocations.map((location, index) => (
+                    <Option key={index} value={location}>
+                      {location}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="paylocation" label="Địa điểm trả">
+                <Select style={{ width: "100%" }}>
+                  {dropOffLocations.map((location, index) => (
+                    <Option key={index} value={location}>
+                      {location}
+                    </Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="quantity" label="Số lượng">
-                <Input onChange={handleQuantityChange} />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="transfer" label="Chuyển khoản">
-                <Input onChange={calculateRemaining} />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="cash" label="Tiền mặt">
-                <Input onChange={calculateRemaining} />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="garageCollection" label="Nhà xe thu">
-                <Input onChange={calculateRemaining} />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -750,15 +926,7 @@ const Tables = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="total" label="Tổng cộng">
-                <Input
-                  disabled
-                  addonAfter="VNĐ"
-                  value={
-                    form.getFieldValue("total")
-                      ? form.getFieldValue("total").toLocaleString()
-                      : ""
-                  }
-                />
+                <Input disabled addonAfter="VNĐ" />
               </Form.Item>
             </Col>
 
@@ -769,6 +937,20 @@ const Tables = () => {
                 valuePropName="checked"
               >
                 <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row className="py-4">
+            <Col span={24}>
+              <Form.Item label="Ghi chú của khách hàng" name="note">
+                <TextArea rows={4} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row className="pb-4">
+            <Col span={24}>
+              <Form.Item label="Thông tin chuyển khoản" name="deposit">
+                <TextArea rows={4} />
               </Form.Item>
             </Col>
           </Row>
@@ -856,7 +1038,7 @@ const Tables = () => {
             </Col>
             <Col span={8}>
               <Form.Item name="ticketPrice" label="Đơn giá">
-                <Input onChange={handlePriceChange} />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={8}>

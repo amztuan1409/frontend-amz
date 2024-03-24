@@ -83,16 +83,6 @@ const Dashboard = () => {
       onFilter: (value, record) => record.lv === value,
     },
     {
-      title: "ĐL",
-      dataIndex: "đl",
-      key: "đl",
-      filters: Array.from(new Set(data.map((item) => item.đl))).map((đl) => ({
-        text: đl,
-        value: đl,
-      })),
-      onFilter: (value, record) => record.đl === value,
-    },
-    {
       title: "lh",
       dataIndex: "lh",
       key: "lh",
@@ -113,24 +103,24 @@ const Dashboard = () => {
       onFilter: (value, record) => record.tqđ === value,
     },
     {
-      title: "nk",
-      dataIndex: "nk",
-      key: "nk",
-      filters: Array.from(new Set(data.map((item) => item.nk))).map((nk) => ({
-        text: nk,
-        value: nk,
+      title: "pp",
+      dataIndex: "pp",
+      key: "pp",
+      filters: Array.from(new Set(data.map((item) => item.pp))).map((pp) => ({
+        text: pp,
+        value: pp,
       })),
-      onFilter: (value, record) => record.nk === value,
+      onFilter: (value, record) => record.pp === value,
     },
     {
-      title: "nxm",
-      dataIndex: "nxm",
-      key: "nxm",
-      filters: Array.from(new Set(data.map((item) => item.nxm))).map((nxm) => ({
-        text: nxm,
-        value: nxm,
+      title: "kt",
+      dataIndex: "kt",
+      key: "kt",
+      filters: Array.from(new Set(data.map((item) => item.kt))).map((kt) => ({
+        text: kt,
+        value: kt,
       })),
-      onFilter: (value, record) => record.nxm === value,
+      onFilter: (value, record) => record.kt === value,
     },
     {
       title: "zl428",
