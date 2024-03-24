@@ -288,7 +288,7 @@ const Tables = () => {
       onFilter: (value, record) => record.timeStart === value,
     },
     {
-      title: "Đơn giá",
+      title: "Đơn giá giường đơn",
       dataIndex: "ticketPrice",
       key: "ticketPrice",
       render: formatCurrency,
@@ -301,7 +301,7 @@ const Tables = () => {
       onFilter: (value, record) => record.ticketPrice === value,
     },
     {
-      title: "Số lượng",
+      title: "Số lượng giường đơn",
       dataIndex: "quantity",
       key: "quantity",
       filters: Array.from(
@@ -311,6 +311,31 @@ const Tables = () => {
         value: quantity,
       })),
       onFilter: (value, record) => record.quantity === value,
+    },
+    {
+      title: "Đơn giá giường đôi",
+      dataIndex: "ticketPriceDouble",
+      key: "ticketPriceDouble",
+      render: formatCurrency,
+      filters: Array.from(
+        new Set(dataBooking.map((item) => item.ticketPriceDouble))
+      ).map((ticketPriceDouble) => ({
+        text: formatCurrency(ticketPriceDouble),
+        value: ticketPriceDouble,
+      })),
+      onFilter: (value, record) => record.ticketPriceDouble === value,
+    },
+    {
+      title: "Số lượng giường đôi",
+      dataIndex: "quantityDouble",
+      key: "quantityDouble",
+      filters: Array.from(
+        new Set(dataBooking.map((item) => item.quantityDouble))
+      ).map((quantityDouble) => ({
+        text: quantityDouble,
+        value: quantityDouble,
+      })),
+      onFilter: (value, record) => record.quantityDouble === value,
     },
     {
       title: "Tổng cộng",
@@ -410,11 +435,13 @@ const Tables = () => {
       values.customerName = values.customerName.toUpperCase();
       // Chuyển đổi các giá trị số từ chuỗi đã format sang số
       values.quantity = numeral(values.quantity).value();
+      values.quantityDouble = numeral(values.quantity).value();
       values.total = numeral(values.total).value();
       values.transfer = numeral(values.transfer).value();
       values.cash = numeral(values.cash).value();
       values.garageCollection = numeral(values.garageCollection).value();
       values.ticketPrice = numeral(values.ticketPrice).value();
+      values.ticketPriceDouble = numeral(values.ticketPrice).value();
       // Đảm bảo rằng 'remaining' cũng được chuyển đổi nếu nó tồn tại trong form
       if (values.remaining) {
         values.remaining = numeral(values.remaining).value();
@@ -464,37 +491,33 @@ const Tables = () => {
 
   const onRefundFinish = async (values) => {
     try {
-      // Xác định body request
       const requestBody = {
         refundPercentage: values.refundPercentage,
+        refundPercentageDouble: values.refundPercentageDouble, // Thêm tỷ lệ hoàn vé cho vé Double
       };
 
-      const token = localStorage.getItem("token"); // Lấy token từ localStorage
+      const token = localStorage.getItem("token");
 
-      // Gọi API PATCH để hoàn vé với ID và tỷ lệ % hoàn vé đã chọn
       const response = await axios.patch(
         `http://localhost:8800/api/bookings/refund/${selectedRefundId}`,
         requestBody,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // Truyền token qua header Authorization
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      // Kiểm tra phản hồi từ API và thông báo kết quả cho người dùng
       if (response && response.data) {
         Modal.success({
           title: "Hoàn vé thành công",
-          content: `Đã hoàn ${values.refundPercentage}% vé thành công.`,
+          content: `Đã hoàn vé thành công. ${values.refundPercentage}% cho vé thường và ${values.refundPercentageDouble}% cho vé Double.`,
         });
       }
 
-      // Sau khi hoàn vé, đóng Modal và làm mới dữ liệu
       setIsRefundModalOpen(false);
-      getData(); // Gọi lại hàm lấy dữ liệu đơn hàng để cập nhật dữ liệu mới
+      getData();
     } catch (error) {
-      // Hiển thị thông báo lỗi nếu có lỗi xảy ra khi gọi API
       Modal.error({
         title: "Lỗi hoàn vé",
         content: "Đã xảy ra lỗi khi hoàn vé. Vui lòng thử lại sau.",
@@ -549,12 +572,14 @@ const Tables = () => {
   const calculateTotals = () => {
     const totals = {
       quantity: 0,
+      quantityDouble: 0,
       total: 0,
       cash: 0,
       transfer: 0,
       remaining: 0,
       ticketPrice: 0,
       garageCollection: 0,
+      ticketPriceDouble: 0,
     };
 
     dataBooking.forEach((item) => {
@@ -565,6 +590,8 @@ const Tables = () => {
       totals.remaining += item.remaining;
       totals.ticketPrice += item.ticketPrice;
       totals.garageCollection += item.garageCollection;
+      totals.quantityDouble += item.quantityDouble;
+      totals.ticketPriceDouble += item.ticketPriceDouble;
     });
 
     return totals;
@@ -634,13 +661,23 @@ const Tables = () => {
   };
 
   const handleValueChange = (_, allValues) => {
-    const { ticketPrice, quantity, transfer, cash, garageCollection } =
-      allValues;
+    const {
+      ticketPrice,
+      quantity,
+      transfer,
+      cash,
+      garageCollection,
+      ticketPriceDouble,
+      quantityDouble,
+    } = allValues;
 
     // Format và cập nhật giá trị đơn giá và số lượng
     const formattedPrice = numeral(ticketPrice).format("0,0");
     const formattedQuantity = numeral(quantity).format("0,0");
-    const totalPrice = numeral(ticketPrice).value() * numeral(quantity).value();
+    const formattedPriceDouble = numeral(ticketPriceDouble).format("0,0");
+    const totalPrice =
+      numeral(ticketPrice).value() * numeral(quantity).value() +
+      numeral(ticketPriceDouble).value() * numeral(quantityDouble).value();
 
     // Tính toán và format cho các trường thanh toán
     const formattedTransfer = numeral(transfer).format("0,0");
@@ -655,6 +692,7 @@ const Tables = () => {
         numeral(garageCollection).value());
 
     form.setFieldsValue({
+      ticketPriceDouble: formattedPriceDouble,
       ticketPrice: formattedPrice,
       quantity: formattedQuantity,
       total: numeral(totalPrice).format("0,0"),
@@ -713,23 +751,28 @@ const Tables = () => {
             <Table.Summary.Cell index={14}>
               {formatCurrency(totals.ticketPrice)}
             </Table.Summary.Cell>
-
             <Table.Summary.Cell index={15}>
               {totals.quantity}
             </Table.Summary.Cell>
             <Table.Summary.Cell index={16}>
-              {formatCurrency(totals.total)}
+              {formatCurrency(totals.ticketPriceDouble)}
             </Table.Summary.Cell>
             <Table.Summary.Cell index={17}>
-              {formatCurrency(totals.cash)}
+              {totals.quantityDouble}
             </Table.Summary.Cell>
             <Table.Summary.Cell index={18}>
-              {formatCurrency(totals.transfer)}
+              {formatCurrency(totals.total)}
             </Table.Summary.Cell>
             <Table.Summary.Cell index={19}>
-              {formatCurrency(totals.garageCollection)}
+              {formatCurrency(totals.cash)}
             </Table.Summary.Cell>
             <Table.Summary.Cell index={20}>
+              {formatCurrency(totals.transfer)}
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={21}>
+              {formatCurrency(totals.garageCollection)}
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={22}>
               {formatCurrency(totals.remaining)}
             </Table.Summary.Cell>
           </Table.Summary.Row>
@@ -745,7 +788,7 @@ const Tables = () => {
         <Form form={form} onFinish={onRefundFinish} layout="vertical">
           <Form.Item
             name="refundPercentage"
-            label="Chọn tỷ lệ % hoàn vé"
+            label="Chọn tỷ lệ % hoàn vé (Loại vé thường)"
             rules={[
               { required: true, message: "Vui lòng chọn tỷ lệ % hoàn vé!" },
             ]}
@@ -758,6 +801,27 @@ const Tables = () => {
               <Select.Option value="100">100%</Select.Option>
             </Select>
           </Form.Item>
+
+          {/* Thêm trường mới cho tỷ lệ % hoàn vé loại vé Double */}
+          <Form.Item
+            name="refundPercentageDouble"
+            label="Chọn tỷ lệ % hoàn vé (Loại vé Đôi)"
+            rules={[
+              {
+                required: true,
+                message: "Vui lòng chọn tỷ lệ % hoàn vé cho vé Đôi!",
+              },
+            ]}
+          >
+            <Select>
+              <Select.Option value="0">0%</Select.Option>
+              <Select.Option value="10">10%</Select.Option>
+              <Select.Option value="20">20%</Select.Option>
+              <Select.Option value="50">50%</Select.Option>
+              <Select.Option value="100">100%</Select.Option>
+            </Select>
+          </Form.Item>
+
           <Form.Item>
             <Button type="primary" htmlType="submit">
               Hoàn vé
@@ -872,8 +936,23 @@ const Tables = () => {
                 <Input />
               </Form.Item>
             </Col>
-            <Col span={24}>
-              <Form.Item name="ticketPrice" label="Đơn giá">
+            <Col span={12}>
+              <Form.Item name="quantity" label="Số lượng giường đơn">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ticketPrice" label="Đơn giá giường đơn">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="quantityDouble" label="Số lượng giường đôi">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ticketPriceDouble" label="Đơn giá giường đôi">
                 <Input />
               </Form.Item>
             </Col>
@@ -899,17 +978,13 @@ const Tables = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item name="quantity" label="Số lượng">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
+
+            <Col span={12}>
               <Form.Item name="transfer" label="Chuyển khoản">
                 <Input />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item name="cash" label="Tiền mặt">
                 <Input />
               </Form.Item>
