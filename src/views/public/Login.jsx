@@ -6,7 +6,7 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch("http://localhost:8800/api/users/login", {
+      const response = await fetch("http://103.72.98.164:8800/api/users/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -20,7 +20,7 @@ const Login = () => {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         // Redirect đến trang chính hoặc làm bất kỳ điều gì bạn muốn ở đây
-        window.location.href = "http://localhost:3000/admin/profile"; // Ví dụ: điều hướng đến trang chính
+        window.location.href = "http://103.72.98.164:3000/admin/profile"; // Ví dụ: điều hướng đến trang chính
       } else {
         console.error("Login failed");
       }

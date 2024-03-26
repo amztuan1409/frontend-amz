@@ -15,7 +15,7 @@ import axios from "axios";
 const Dashboard = () => {
   const [data, setData] = useState([]);
   const getData = async () => {
-    const res = await axios.get("http://localhost:8800/api/report");
+    const res = await axios.get("http://103.72.98.164:8800/api/report");
     setData(res.data.data.reports);
   };
   useEffect(() => {

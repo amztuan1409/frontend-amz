@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef } from "react";
 import {
   Table,
   Button,
@@ -24,7 +24,10 @@ const Tables = () => {
   const [month, setMonth] = useState(initialMonth.toString());
   const [year, setYear] = useState(initialYear.toString());
   const [dataBooking, setDataBooking] = useState([]);
-
+  const [manualEntry, setManualEntry] = useState({
+    pickup: false,
+    dropoff: false,
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
@@ -60,14 +63,21 @@ const Tables = () => {
       phoneNumber: record.phoneNumber,
       trip: record.trip,
       busCompany: record.busCompany,
-      ticketPrice: record.ticketPrice,
       quantity: record.quantity,
-      total: record.total,
+      quantityDouble: record.quantityDouble,
+      ticketPriceDouble: numeral(record.ticketPriceDouble).format("0,0"),
+      ticketPrice: numeral(record.ticketPrice).format("0,0"),
+      total: numeral(record.total).format("0,0"),
       isPayment: record.isPayment,
-      transfer: record.transfer,
-      cash: record.cash,
-      garageCollection: record.garageCollection,
-      remaining: record.remaining,
+      transfer: numeral(record.transfer).format("0,0"),
+      cash: numeral(record.cash).format("0,0"),
+      garageCollection: numeral(record.garageCollection).format("0,0"),
+      remaining: numeral(record.remaining).format("0,0"),
+      seats: record.seats,
+      pickuplocation: record.pickuplocation,
+      paylocation: record.paylocation,
+      note: record.note,
+      deposit: record.deposit,
     });
   };
 
@@ -86,21 +96,28 @@ const Tables = () => {
         bookingSource: values.bookingSource,
         customerName: values.customerName,
         phoneNumber: values.phoneNumber,
+        pickuplocation: values.pickuplocation,
+        paylocation: values.paylocation,
         trip: values.trip,
         busCompany: values.busCompany,
-        ticketPrice: parseFloat(values.ticketPrice),
-        quantity: parseInt(values.quantity),
-        total: parseInt(values.total),
+        note: values.note,
+        deposit: values.deposit,
+        seats: values.seats,
+        ticketPriceDouble: numeral(values.ticketPriceDouble).value(),
+        quantityDouble: numeral(values.quantityDouble).value(),
+        ticketPrice: numeral(values.ticketPrice).value(),
+        quantity: numeral(values.quantity).value(),
+        total: numeral(values.total).value(),
         isPayment: values.isPayment,
-        transfer: values.transfer,
-        cash: values.cash,
-        garageCollection: values.garageCollection,
-        remaining: values.remaining,
+        transfer: numeral(values.transfer).value(),
+        cash: numeral(values.cash).value(),
+        garageCollection: numeral(values.garageCollection).value(),
+        remaining: numeral(values.remaining).value(),
       };
 
       const token = localStorage.getItem("token");
       const response = await axios.patch(
-        `http://localhost:8800/api/bookings/${selectedBooking._id}`,
+        `http://103.72.98.164:8800/api/bookings/${selectedBooking._id}`,
         updatedBooking,
         {
           headers: {
@@ -132,7 +149,7 @@ const Tables = () => {
     console.log(month, year);
     try {
       const res = await axios.post(
-        `http://localhost:8800/api/bookings/getbyuserId/${month}/${year}`,
+        `http://103.72.98.164:8800/api/bookings/getbyuserId/${month}/${year}`,
         { userId: id }
       );
       setDataBooking(res.data);
@@ -206,13 +223,47 @@ const Tables = () => {
       title: "Số điện thoại",
       dataIndex: "phoneNumber",
       key: "phoneNumber",
-      filters: Array.from(
-        new Set(dataBooking.map((item) => item.phoneNumber))
-      ).map((phoneNumber) => ({
-        text: phoneNumber,
-        value: phoneNumber,
-      })),
-      onFilter: (value, record) => record.phoneNumber === value,
+      filterDropdown: ({
+        setSelectedKeys,
+        selectedKeys,
+        confirm,
+        clearFilters,
+      }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            autoFocus
+            placeholder="Tìm kiếm số điện thoại"
+            value={selectedKeys[0]}
+            onChange={(e) => {
+              setSelectedKeys(e.target.value ? [e.target.value] : []);
+              confirm({ closeDropdown: false }); // Giữ dropdown mở để tiếp tục tìm kiếm
+            }}
+            onPressEnter={() => confirm()} // Thực hiện tìm kiếm khi ấn Enter
+            style={{ width: 188, marginBottom: 8, display: "block" }}
+          />
+          <Button
+            type="primary"
+            onClick={() => confirm()} // Thực hiện tìm kiếm khi click
+            icon="search"
+            size="small"
+            style={{ width: 90, marginRight: 8 }}
+          >
+            Tìm kiếm
+          </Button>
+          <Button
+            onClick={() => clearFilters()} // Xóa bộ lọc
+            size="small"
+            style={{ width: 90 }}
+          >
+            Đặt lại
+          </Button>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.phoneNumber
+          .toString()
+          .toLowerCase()
+          .includes(value.toLowerCase()),
     },
     {
       title: "Nguồn đặt",
@@ -265,16 +316,7 @@ const Tables = () => {
       dataIndex: "paylocation",
       key: "paylocation",
     },
-    {
-      title: "Cọc tiền",
-      dataIndex: "deposit",
-      key: "deposit",
-    },
-    {
-      title: "Ghi chú",
-      dataIndex: "note",
-      key: "note",
-    },
+
     {
       title: "Giờ đi",
       dataIndex: "timeStart",
@@ -368,6 +410,16 @@ const Tables = () => {
       render: formatCurrency,
     },
     {
+      title: "Cọc tiền",
+      dataIndex: "deposit",
+      key: "deposit",
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "note",
+      key: "note",
+    },
+    {
       title: "Trạng thái thanh toán",
       dataIndex: "isPayment",
       key: "isPayment",
@@ -378,6 +430,7 @@ const Tables = () => {
       onFilter: (value, record) => record.isPayment === value,
       render: (text) => (text ? "Đã thanh toán" : "Chưa thanh toán"),
     },
+
     {
       title: "Hành động",
       key: "action",
@@ -435,13 +488,13 @@ const Tables = () => {
       values.customerName = values.customerName.toUpperCase();
       // Chuyển đổi các giá trị số từ chuỗi đã format sang số
       values.quantity = numeral(values.quantity).value();
-      values.quantityDouble = numeral(values.quantity).value();
+      values.quantityDouble = numeral(values.quantityDouble).value();
       values.total = numeral(values.total).value();
       values.transfer = numeral(values.transfer).value();
       values.cash = numeral(values.cash).value();
       values.garageCollection = numeral(values.garageCollection).value();
       values.ticketPrice = numeral(values.ticketPrice).value();
-      values.ticketPriceDouble = numeral(values.ticketPrice).value();
+      values.ticketPriceDouble = numeral(values.ticketPriceDouble).value();
       // Đảm bảo rằng 'remaining' cũng được chuyển đổi nếu nó tồn tại trong form
       if (values.remaining) {
         values.remaining = numeral(values.remaining).value();
@@ -450,7 +503,7 @@ const Tables = () => {
       console.log(values);
       // Gửi dữ liệu đặt vé lên máy chủ
       const response = await axios.post(
-        "http://localhost:8800/api/bookings/create",
+        "http://103.72.98.164:8800/api/bookings/create",
         values,
         {
           headers: {
@@ -499,7 +552,7 @@ const Tables = () => {
       const token = localStorage.getItem("token");
 
       const response = await axios.patch(
-        `http://localhost:8800/api/bookings/refund/${selectedRefundId}`,
+        `http://103.72.98.164:8800/api/bookings/refund/${selectedRefundId}`,
         requestBody,
         {
           headers: {
@@ -537,7 +590,7 @@ const Tables = () => {
         try {
           const token = localStorage.getItem("token");
           await axios.delete(
-            `http://localhost:8800/api/bookings/delete/${bookingId}`,
+            `http://103.72.98.164:8800/api/bookings/delete/${bookingId}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -702,7 +755,7 @@ const Tables = () => {
       remaining: numeral(remaining).format("0,0"), // Cập nhật giá trị còn lại
     });
   };
-
+ 
   return (
     <>
       <div className="flex items-center justify-between py-4">
@@ -722,8 +775,9 @@ const Tables = () => {
       <Table
         columns={columns}
         dataSource={dataBooking}
-        pagination={{ pageSize: 10 }}
+        pagination={{ pageSize: 10000 }}
         scroll={{ x: "max-content" }}
+        
         rowClassName={(record) => (record.isPayment ? "" : "unpaid-row")}
         summary={() => (
           <Table.Summary.Row
@@ -746,35 +800,38 @@ const Tables = () => {
             <Table.Summary.Cell index={9}></Table.Summary.Cell>
             <Table.Summary.Cell index={10}></Table.Summary.Cell>
             <Table.Summary.Cell index={11}></Table.Summary.Cell>
-            <Table.Summary.Cell index={12}></Table.Summary.Cell>
-            <Table.Summary.Cell index={13}></Table.Summary.Cell>
-            <Table.Summary.Cell index={14}>
+            <Table.Summary.Cell index={12}>
+              {" "}
               {formatCurrency(totals.ticketPrice)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={15}>
+            <Table.Summary.Cell index={13}>
+              {" "}
               {totals.quantity}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={16}>
+            <Table.Summary.Cell index={14}>
               {formatCurrency(totals.ticketPriceDouble)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={17}>
+            <Table.Summary.Cell index={15}>
               {totals.quantityDouble}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={18}>
+            <Table.Summary.Cell index={16}>
               {formatCurrency(totals.total)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={19}>
+            <Table.Summary.Cell index={17}>
               {formatCurrency(totals.cash)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={20}>
+            <Table.Summary.Cell index={18}>
               {formatCurrency(totals.transfer)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={21}>
+            <Table.Summary.Cell index={19}>
               {formatCurrency(totals.garageCollection)}
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={22}>
+            <Table.Summary.Cell index={20}>
               {formatCurrency(totals.remaining)}
             </Table.Summary.Cell>
+            <Table.Summary.Cell index={21}></Table.Summary.Cell>
+            <Table.Summary.Cell index={22}></Table.Summary.Cell>
+            <Table.Summary.Cell index={23}></Table.Summary.Cell>
           </Table.Summary.Row>
         )}
       />
@@ -957,27 +1014,16 @@ const Tables = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="pickuplocation" label="Địa điểm đón">
-                <Select style={{ width: "100%" }}>
-                  {pickLocations.map((location, index) => (
-                    <Option key={index} value={location}>
-                      {location}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="paylocation" label="Địa điểm trả">
-                <Select style={{ width: "100%" }}>
-                  {dropOffLocations.map((location, index) => (
-                    <Option key={index} value={location}>
-                      {location}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
+  <Form.Item name="pickuplocation" label="Điểm đón">
+    <Input placeholder="Nhập điểm đón" />
+  </Form.Item>
+</Col>
+
+<Col span={12}>
+  <Form.Item name="paylocation" label="Điểm trả">
+    <Input placeholder="Nhập điểm trả" />
+  </Form.Item>
+</Col>
 
             <Col span={12}>
               <Form.Item name="transfer" label="Chuyển khoản">
@@ -1048,7 +1094,12 @@ const Tables = () => {
         footer={null}
         width={800}
       >
-        <Form form={form} onFinish={onEditFinish} layout="vertical">
+        <Form
+          form={form}
+          onValuesChange={handleValueChange}
+          onFinish={onEditFinish}
+          layout="vertical"
+        >
           <Row gutter={[16, 16]}>
             <Col span={8}>
               <Form.Item name="date" label="Ngày đặt">
@@ -1112,33 +1163,61 @@ const Tables = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="ticketPrice" label="Đơn giá">
+              <Form.Item name="seats" label="Số Ghế">
                 <Input />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item name="quantity" label="Số lượng">
-                <Input onChange={handleQuantityChange} />
+            <Col span={12}>
+              <Form.Item name="quantity" label="Số lượng giường đơn">
+                <Input />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
+              <Form.Item name="ticketPrice" label="Đơn giá giường đơn">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="quantityDouble" label="Số lượng giường đôi">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ticketPriceDouble" label="Đơn giá giường đôi">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+  <Form.Item name="pickuplocation" label="Điểm đón">
+    <Input placeholder="Nhập điểm đón" />
+  </Form.Item>
+</Col>
+
+<Col span={12}>
+  <Form.Item name="paylocation" label="Điểm trả">
+    <Input placeholder="Nhập điểm trả" />
+  </Form.Item>
+</Col>
+            
+
+            <Col span={12}>
               <Form.Item name="transfer" label="Chuyển khoản">
-                <Input onChange={calculateRemaining} />
+                <Input />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item name="cash" label="Tiền mặt">
-                <Input onChange={calculateRemaining} />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="garageCollection" label="Nhà xe thu">
-                <Input onChange={calculateRemaining} />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="remaining" label="Còn lại">
-                <Input disabled addonAfter="VNĐ" />
+                <Input disabled addon addonAfter="VNĐ" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -1162,6 +1241,20 @@ const Tables = () => {
                 valuePropName="checked"
               >
                 <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row className="py-4">
+            <Col span={24}>
+              <Form.Item label="Ghi chú của khách hàng" name="note">
+                <TextArea rows={4} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row className="pb-4">
+            <Col span={24}>
+              <Form.Item label="Thông tin chuyển khoản" name="deposit">
+                <TextArea rows={4} />
               </Form.Item>
             </Col>
           </Row>

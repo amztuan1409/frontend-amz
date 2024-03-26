@@ -282,8 +282,8 @@ table {
   }
   
   .unpaid-row {
-    background-color: red !important;
-    color: #fff !important;
+    background-color: rgba(102, 204, 255, 0.8) !important;
+    color: #000 !important;
   }
   /* .unpaid-row:hover{
     background: #ff0000 !important;
@@ -305,3 +305,6 @@ table {
   :where(.css-dev-only-do-not-override-djtmh8).ant-switch .ant-switch-checked{
     background-color: #1677ff !important;
   } */
+.ant-table-thead .ant-table-cell {
+  background-color: rgb(240,230,140) !important
+}

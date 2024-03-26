@@ -46,7 +46,7 @@ const routes = [
     icon: <MdOutlineShoppingCart className="h-6 w-6" />,
     component: <NFTMarketplace />,
     secondary: true,
-    role: "admin",
+    
   },
   {
     name: "Nhân viên nhập liệu",

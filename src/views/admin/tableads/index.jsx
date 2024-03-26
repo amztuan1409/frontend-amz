@@ -25,7 +25,7 @@ const Tables = () => {
   const fetchExpenses = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:8800/api/expenses"); // Thay đổi URL API của bạn
+      const response = await axios.get("http://103.72.98.164:8800/api/expenses"); // Thay đổi URL API của bạn
       setExpenses(response.data);
     } catch (error) {
       console.error("Error fetching expenses:", error);
@@ -117,7 +117,7 @@ const Tables = () => {
       };
 
       await axios.post(
-        "http://localhost:8800/api/expenses/create",
+        "http://103.72.98.164:8800/api/expenses/create",
         formattedValues,
         {
           headers: { Authorization: `Bearer ${token}` },

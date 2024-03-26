@@ -15,7 +15,7 @@ const Dashboard = () => {
   const fetchData = async (date) => {
     try {
       const response = await axios.get(
-        `http://localhost:8800/api/bookings/revenue/${date}`
+        `http://103.72.98.164:8800/api/bookings/revenue/${date}`
       );
       setData(response.data);
       console.log("Data fetched:", response.data); // Log dữ liệu ra console

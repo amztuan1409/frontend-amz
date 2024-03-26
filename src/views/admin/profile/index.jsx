@@ -12,7 +12,7 @@ const ProfileOverview = () => {
     const getData = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8800/api/users/${id}`
+          `http://103.72.98.164:8800/api/users/${id}`
         );
         setdataUser(response.data); // Cập nhật trạng thái với dữ liệu người dùng
       } catch (error) {

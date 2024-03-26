@@ -11,7 +11,7 @@ const Marketplace = () => {
   const [form] = Form.useForm();
   const getData = async () => {
     try {
-      const res = await axios.get("http://localhost:8800/api/users");
+      const res = await axios.get("http://103.72.98.164:8800/api/users");
       setData(res.data);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -73,7 +73,7 @@ const Marketplace = () => {
     };
     console.log(requestData);
     try {
-      await axios.post("http://localhost:8800/api/users/register", requestData);
+      await axios.post("http://103.72.98.164:8800/api/users/register", requestData);
       setIsModalVisible(false);
       getData(); // Cập nhật lại danh sách nhân viên sau khi thêm mới
       message.success("Đã tạo nhân viên mới thành công!");
