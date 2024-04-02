@@ -83,7 +83,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.lv === value,
     },
     {
-      title: "lh",
+      title: "LH",
       dataIndex: "lh",
       key: "lh",
       filters: Array.from(new Set(data.map((item) => item.lh))).map((lh) => ({
@@ -93,7 +93,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.lh === value,
     },
     {
-      title: "tqđ",
+      title: "TQĐ",
       dataIndex: "tqđ",
       key: "tqđ",
       filters: Array.from(new Set(data.map((item) => item.tqđ))).map((tqđ) => ({
@@ -103,7 +103,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.tqđ === value,
     },
     {
-      title: "pp",
+      title: "PP",
       dataIndex: "pp",
       key: "pp",
       filters: Array.from(new Set(data.map((item) => item.pp))).map((pp) => ({
@@ -113,7 +113,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.pp === value,
     },
     {
-      title: "kt",
+      title: "KT",
       dataIndex: "kt",
       key: "kt",
       filters: Array.from(new Set(data.map((item) => item.kt))).map((kt) => ({
@@ -123,7 +123,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.kt === value,
     },
     {
-      title: "zl428",
+      title: "ZL428",
       dataIndex: "zl428",
       key: "zl428",
       filters: Array.from(new Set(data.map((item) => item.zl428))).map(
@@ -135,7 +135,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.zl428 === value,
     },
     {
-      title: "zl200",
+      title: "ZL200",
       dataIndex: "zl200",
       key: "zl200",
       filters: Array.from(new Set(data.map((item) => item.zl200))).map(
@@ -147,7 +147,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.zl200 === value,
     },
     {
-      title: "zl232",
+      title: "ZL232",
       dataIndex: "zl232",
       key: "zl232",
       filters: Array.from(new Set(data.map((item) => item.zl232))).map(
@@ -159,7 +159,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.zl232 === value,
     },
     {
-      title: "zl987",
+      title: "ZL987",
       dataIndex: "zl978",
       key: "zl978",
       filters: Array.from(new Set(data.map((item) => item.zl978))).map(
@@ -171,7 +171,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.zl978 === value,
     },
     {
-      title: "pd",
+      title: "PD",
       dataIndex: "pd",
       key: "pd",
       filters: Array.from(new Set(data.map((item) => item.pd))).map((pd) => ({
@@ -181,7 +181,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.pd === value,
     },
     {
-      title: "lm",
+      title: "LM",
       dataIndex: "lm",
       key: "lm",
       filters: Array.from(new Set(data.map((item) => item.lm))).map((lm) => ({
@@ -191,7 +191,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.lm === value,
     },
     {
-      title: "zloa",
+      title: "ZLOA",
       dataIndex: "zloa",
       key: "zloa",
       filters: Array.from(new Set(data.map((item) => item.zloa))).map(
@@ -203,7 +203,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.zloa === value,
     },
     {
-      title: "amz",
+      title: "AMZ",
       dataIndex: "amz",
       key: "amz",
       filters: Array.from(new Set(data.map((item) => item.amz))).map((amz) => ({
@@ -213,7 +213,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.amz === value,
     },
     {
-      title: "vn",
+      title: "VN",
       dataIndex: "vn",
       key: "vn",
       filters: Array.from(new Set(data.map((item) => item.vn))).map((vn) => ({
@@ -223,7 +223,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.vn === value,
     },
     {
-      title: "com",
+      title: "COM",
       dataIndex: "com",
       key: "com",
       filters: Array.from(new Set(data.map((item) => item.com))).map((com) => ({
@@ -233,7 +233,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.com === value,
     },
     {
-      title: "dt",
+      title: "DT",
       dataIndex: "dt",
       key: "dt",
       filters: Array.from(new Set(data.map((item) => item.dt))).map((dt) => ({
@@ -243,7 +243,7 @@ const Dashboard = () => {
       onFilter: (value, record) => record.dt === value,
     },
     {
-      title: "hl",
+      title: "HL",
       dataIndex: "hl",
       key: "hl",
       filters: Array.from(new Set(data.map((item) => item.hl))).map((hl) => ({

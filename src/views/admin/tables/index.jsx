@@ -1,4 +1,4 @@
-import React, { useState, useEffect , useRef } from "react";
+import React, { useState, useEffect , useRef  } from "react";
 import {
   Table,
   Button,
@@ -15,19 +15,25 @@ import axios from "axios";
 import dayjs from "dayjs";
 import moment from "moment";
 import numeral from "numeral";
+import Loading from "views/public/Loading";
 
 const Tables = () => {
+  const tableRef = useRef(null);
+
+  useEffect(() => {
+    if (tableRef.current) {
+      tableRef.current.scrollToFirstRow();
+    }
+  }, []);
   const today = new Date();
   const initialMonth = today.getMonth() + 1; // Lấy tháng hiện tại
   const initialYear = today.getFullYear(); // Lấy năm hiện tại
   // Thiết lập giá trị mặc định cho month và year
   const [month, setMonth] = useState(initialMonth.toString());
+  const { RangePicker } = DatePicker;
   const [year, setYear] = useState(initialYear.toString());
   const [dataBooking, setDataBooking] = useState([]);
-  const [manualEntry, setManualEntry] = useState({
-    pickup: false,
-    dropoff: false,
-  });
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
@@ -35,38 +41,58 @@ const Tables = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedRefundId, setSelectedRefundId] = useState(null);
   const [currentMonthYear, setCurrentMonthYear] = useState(moment());
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
+
 
   const userString = localStorage.getItem("user");
   const user = JSON.parse(userString);
   const id = user._id;
   const name = user.name;
-
   const { TextArea } = Input;
 
   const showModal = () => {
     form.resetFields();
+    form.setFieldsValue({
+      ticketPrice: numeral(450000).format('0,0'),
+      ticketPriceDouble: numeral(750000).format('0,0'),
+      ticketPriceBack: numeral(450000).format('0,0'),
+      ticketPriceDoubleBack: numeral(750000).format('0,0'),
+    });
     setIsModalOpen(true);
   };
 
   const handleCancel = () => {
     setIsModalOpen(false);
+    setIsRoundTrip(false)
   };
   const showEditModal = (record) => {
+   
     setSelectedBooking(record);
+    const isRoundTripBooking = (record.quantityBack && record.quantityBack > 0) || (record.quantityDoubleBack && record.quantityDoubleBack > 0);
+    console.log(isRoundTripBooking);
+    setIsRoundTrip(isRoundTripBooking); // Cập nhật state dựa trên kết quả kiểm tra
     setIsEditModalOpen(true);
     form.setFieldsValue({
       date: dayjs(record.date),
       dateGo: dayjs(record.dateGo),
+      dateBack: dayjs(record.dateBack),
       timeStart: record.timeStart,
+      timeBack: record.timeBack,
       bookingSource: record.bookingSource,
       customerName: record.customerName,
       phoneNumber: record.phoneNumber,
       trip: record.trip,
       busCompany: record.busCompany,
+      busCompanyBack: record.busCompanyBack,
       quantity: record.quantity,
+      quantityBack: record.quantityBack,
       quantityDouble: record.quantityDouble,
+      quantityDoubleBack: record.quantityDoubleBack,
       ticketPriceDouble: numeral(record.ticketPriceDouble).format("0,0"),
+      ticketPriceDoubleBack: numeral(record.ticketPriceDoubleBack).format("0,0"),
       ticketPrice: numeral(record.ticketPrice).format("0,0"),
+      ticketPriceBack: numeral(record.ticketPriceBack).format("0,0"),
       total: numeral(record.total).format("0,0"),
       isPayment: record.isPayment,
       transfer: numeral(record.transfer).format("0,0"),
@@ -74,39 +100,56 @@ const Tables = () => {
       garageCollection: numeral(record.garageCollection).format("0,0"),
       remaining: numeral(record.remaining).format("0,0"),
       seats: record.seats,
+      seatsBack: record.seatsBack,
       pickuplocation: record.pickuplocation,
+      pickuplocationBack: record.pickuplocationBack,
       paylocation: record.paylocation,
+      paylocationBack: record.paylocationBack,
       note: record.note,
       deposit: record.deposit,
+      roundTrip: isRoundTripBooking,
     });
   };
 
   const handleEditCancel = () => {
+     setIsRoundTrip(false)
     setIsEditModalOpen(false);
   };
 
   const onEditFinish = async (values) => {
+   
     try {
+      setIsLoading(true); 
       // Update selected booking data with form values
       const updatedBooking = {
         ...selectedBooking,
         date: values.date.format("YYYY-MM-DD"),
         dateGo: values.dateGo.format("YYYY-MM-DD"),
+        dateBack: values.dateBack.format("YYYY-MM-DD"),
         timeStart: values.timeStart,
+        timeBack: values.timeBack,
         bookingSource: values.bookingSource,
         customerName: values.customerName,
         phoneNumber: values.phoneNumber,
         pickuplocation: values.pickuplocation,
+        pickuplocationBack: values.pickuplocationBack,
         paylocation: values.paylocation,
+        paylocationBack: values.paylocationBack,
         trip: values.trip,
         busCompany: values.busCompany,
+        busCompanyBack: values.busCompanyBack,
         note: values.note,
         deposit: values.deposit,
         seats: values.seats,
+        seatsBack:  values.seatsBack,
         ticketPriceDouble: numeral(values.ticketPriceDouble).value(),
+        ticketPriceDoubleBack: numeral(values.ticketPriceDoubleBack).value(),
         quantityDouble: numeral(values.quantityDouble).value(),
+        quantityDoubleBack: numeral(values.quantityDoubleBack).value(),
         ticketPrice: numeral(values.ticketPrice).value(),
+        ticketPriceBack:numeral(values.ticketPriceBack).value(),
         quantity: numeral(values.quantity).value(),
+        quantityBack: numeral(values.quantityBack).value(),
         total: numeral(values.total).value(),
         isPayment: values.isPayment,
         transfer: numeral(values.transfer).value(),
@@ -142,25 +185,37 @@ const Tables = () => {
           "Đã xảy ra lỗi khi chỉnh sửa đơn đặt vé. Vui lòng thử lại sau!",
       });
       console.error("Lỗi khi chỉnh sửa đơn đặt vé:", error);
+    }finally {
+      setIsLoading(false); // Kết thúc hiển thị component loading sau khi hoàn thành hoặc xảy ra lỗi
     }
   };
 
-  const getData = async () => {
-    console.log(month, year);
+  const getData = async (startDate, endDate) => {
+    const token = localStorage.getItem("token");
     try {
-      const res = await axios.post(
-        `http://103.72.98.164:8800/api/bookings/getbyuserId/${month}/${year}`,
-        { userId: id }
+      const response = await axios.post(
+        `http://103.72.98.164:8800/api/bookings/getbyuserId`, // Giả định đây là endpoint hỗ trợ lấy dữ liệu theo khoảng thời gian
+        {
+          userId: id,
+          startDate,
+          endDate,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
-      setDataBooking(res.data);
+      setDataBooking(response.data);
     } catch (error) {
       console.error("Lỗi khi lấy dữ liệu booking:", error);
     }
   };
   useEffect(() => {
-    // Xử lý khi thay đổi tháng và năm
+    // Chuyển đổi ngày hiện tại sang định dạng YYYY-MM-DD
+    const today = moment().format("YYYY-MM-DD");
     getData();
-  }, [month, year]); // Lắng nghe sự kiện thay đổi monthYear hoặc id
+  }, []); // Mảng rỗng đảm bảo rằng effect chỉ chạy một lần sau khi component mount
+  
+  
 
   const formatDate = (text) => {
     const date = new Date(text);
@@ -181,12 +236,12 @@ const Tables = () => {
       dataIndex: "date",
       key: "date",
       render: formatDate,
-      filters: Array.from(
-        new Set(dataBooking.map((item) => formatDate(item.date)))
-      ).map((date) => ({
-        text: date,
-        value: date,
-      })),
+      filters: Array.from(new Set(dataBooking.map((item) => formatDate(item.date))))
+        .sort((a, b) => new Date(a) - new Date(b)) // Sắp xếp ngày từ cũ đến mới
+        .map((date) => ({
+          text: date,
+          value: date,
+        })),
       onFilter: (value, record) => formatDate(record.date) === value,
     },
     {
@@ -306,16 +361,7 @@ const Tables = () => {
       ),
       onFilter: (value, record) => record.trip === value,
     },
-    {
-      title: "Điểm đón",
-      dataIndex: "pickuplocation",
-      key: "pickuplocation",
-    },
-    {
-      title: "Điểm trả",
-      dataIndex: "paylocation",
-      key: "paylocation",
-    },
+  
 
     {
       title: "Giờ đi",
@@ -483,18 +529,24 @@ const Tables = () => {
 
   const onFinish = async (values) => {
     try {
+      setIsLoading(true); // Bắt đầu hiển thị component loading khi bắt đầu gửi dữ liệu
+
       values.date = dayjs(values.date).format("YYYY-MM-DD");
       values.dateGo = dayjs(values.dateGo).format("YYYY-MM-DD");
-      values.customerName = values.customerName.toUpperCase();
+      values.customerName = values.customerName ? values.customerName.toUpperCase() : "";
       // Chuyển đổi các giá trị số từ chuỗi đã format sang số
       values.quantity = numeral(values.quantity).value();
+      values.quantityBack = numeral(values.quantityBack).value();
       values.quantityDouble = numeral(values.quantityDouble).value();
+      values.quantityDoubleBack = numeral(values.quantityDoubleBack).value();
       values.total = numeral(values.total).value();
       values.transfer = numeral(values.transfer).value();
       values.cash = numeral(values.cash).value();
       values.garageCollection = numeral(values.garageCollection).value();
       values.ticketPrice = numeral(values.ticketPrice).value();
+      values.ticketPriceBack = numeral(values.ticketPriceBack).value();
       values.ticketPriceDouble = numeral(values.ticketPriceDouble).value();
+      values.ticketPriceDoubleBack = numeral(values.ticketPriceDoubleBack).value();
       // Đảm bảo rằng 'remaining' cũng được chuyển đổi nếu nó tồn tại trong form
       if (values.remaining) {
         values.remaining = numeral(values.remaining).value();
@@ -522,6 +574,7 @@ const Tables = () => {
           getData();
         },
       });
+      setIsRoundTrip(false)
     } catch (error) {
       // Hiển thị thông báo lỗi nếu có lỗi xảy ra
       Modal.error({
@@ -529,6 +582,8 @@ const Tables = () => {
         content: "Đã xảy ra lỗi khi đặt vé. Vui lòng thử lại sau!",
       });
       console.error("Lỗi khi đặt vé:", error);
+    } finally {
+      setIsLoading(false); // Kết thúc hiển thị component loading sau khi hoàn thành hoặc xảy ra lỗi
     }
   };
 
@@ -540,15 +595,18 @@ const Tables = () => {
   // Hàm để đóng Modal hoàn vé
   const handleRefundCancel = () => {
     setIsRefundModalOpen(false);
+    
   };
 
   const onRefundFinish = async (values) => {
+    values.refundAmount = numeral(values.refundAmount).value();
     try {
+      setIsLoading(true);
       const requestBody = {
-        refundPercentage: values.refundPercentage,
-        refundPercentageDouble: values.refundPercentageDouble, // Thêm tỷ lệ hoàn vé cho vé Double
+        refundAmount: values.refundAmount,
+        season: values.season,
+        bank: values.bank, // Thêm trường bank vào requestBody
       };
-
       const token = localStorage.getItem("token");
 
       const response = await axios.patch(
@@ -564,10 +622,11 @@ const Tables = () => {
       if (response && response.data) {
         Modal.success({
           title: "Hoàn vé thành công",
-          content: `Đã hoàn vé thành công. ${values.refundPercentage}% cho vé thường và ${values.refundPercentageDouble}% cho vé Double.`,
+          content: `Đã hoàn ${requestBody.refundAmount.toLocaleString()}  cho đơn này thành công.`,
         });
-      }
 
+      }
+      form.resetFields();
       setIsRefundModalOpen(false);
       getData();
     } catch (error) {
@@ -575,9 +634,13 @@ const Tables = () => {
         title: "Lỗi hoàn vé",
         content: "Đã xảy ra lỗi khi hoàn vé. Vui lòng thử lại sau.",
       });
+      form.resetFields();
       console.error("Lỗi khi hoàn vé:", error);
+    } finally {
+      setIsLoading(false); // Kết thúc hiển thị component loading sau khi hoàn thành hoặc xảy ra lỗi
     }
   };
+
 
   const handleDelete = (bookingId) => {
     Modal.confirm({
@@ -651,92 +714,61 @@ const Tables = () => {
   };
 
   const totals = calculateTotals();
-  const locationsByBusCompany = {
-    AA: [
-      "Văn phòng SG: 526 An Dương Vương, P9, Quận 5, HCM",
-      "Văn phòng SG: 116 QL13, P26, Bình Thạnh, HCM",
-      "Văn phòng DL: 4C Yersin, Phường 10, TP Đà Lạt",
-    ],
-    LV: [
-      "Văn phòng: 332 An Dương Vương, P9, Quận 5, HCM",
-      "Văn phòng: 152 Chu Văn An, P26, Bình Thạnh HCM",
-      "Văn phòng: 14 Đống Đa, Phường 3, TP Đà Lạt",
-    ],
-    LH: ["D11 KQH Hoàng Diệu, Phường 5, TP Đà Lạt"],
-    TQĐ: [
-      "Bến xe An Sương, QL22, Hóc Môn, HCM",
-      "263 Mai Anh Đào, Phường 8, TP Đà Lạt",
-      "",
-    ],
-    PP: [
-      "20C đường 3/4, Phường 3, TP Đà Lạt",
-      "522 Hoàng Văn Thụ, P4, Quận Tân Bình, HCM",
-      "4 Nguyễn Ái Quốc, Phường Quang Vinh, TP Biên Hoà",
-    ],
-    KT: ["16 Phan Chu Trinh, Phường 9, TP Đà Lạt"],
-  };
-  const dropOffLocationsByBusCompany = {
-    AA: [
-      "526 An Dương Vương, P9, Quận 5, HCM",
-      "116 QL13, P26, Bình Thạnh, HCM",
-      "4C Yersin, Phường 10, TP Đà Lạt",
-    ],
-    LV: [
-      "332 An Dương Vương, P9, Quận 5, HCM",
-      "152 Chu Văn An, P26, Bình Thạnh HCM",
-      "14 Đống Đa, Phường 3, TP Đà Lạt",
-    ],
-    LH: ["D11 KQH Hoàng Diệu, Phường 5, TP Đà Lạt"],
-    TQĐ: [
-      "Bến xe An Sương, QL22, Hóc Môn, HCM",
-      "263 Mai Anh Đào, Phường 8, TP Đà Lạt",
-    ],
-    PP: [
-      "20C đường 3/4, Phường 3, TP Đà Lạt",
-      "522 Hoàng Văn Thụ, P4, Quận Tân Bình, HCM",
-      "4 Nguyễn Ái Quốc, Phường Quang Vinh, TP Biên Hoà",
-    ],
-    KT: ["16 Phan Chu Trinh, Phường 9, TP Đà Lạt"],
-  };
-  const [pickLocations, setPickLocations] = useState([]);
-  const [dropOffLocations, setDropOffLocations] = useState([]);
-  const [formattedTicketPrice, setFormattedTicketPrice] = useState("");
-  // State để lưu giá trị thực sự (số) để xử lý logic hoặc gửi lên server
+ 
+  const handleValueChangeRefund = (_, allValues) => {
+    const {
+      refundAmount
+    } = allValues;
+   
+    // Format và cập nhật giá trị đơn giá và số lượng
+    const formattedrefundAmount = numeral(refundAmount).format("0,0");
+   
 
-  const handleBusCompanyChange = (value) => {
-    console.log("Selected bus company:", value);
-    const pickLocations = locationsByBusCompany[value] || [];
-    console.log("Pickup locations:", pickLocations);
-    setPickLocations(pickLocations);
-    const dropOffLocations = dropOffLocationsByBusCompany[value] || [];
-    console.log("Drop-off locations:", dropOffLocations);
-    setDropOffLocations(dropOffLocations);
-  };
+  
+    form.setFieldsValue({
+      refundAmount: formattedrefundAmount,
+    });
+  }; 
+  
+  
 
   const handleValueChange = (_, allValues) => {
     const {
       ticketPrice,
       quantity,
+      ticketPriceBack,
+      quantityBack,
       transfer,
       cash,
       garageCollection,
       ticketPriceDouble,
       quantityDouble,
-    } = allValues;
+      ticketPriceDoubleBack,
+      quantityDoubleBack,
 
+    } = allValues;
+   
     // Format và cập nhật giá trị đơn giá và số lượng
     const formattedPrice = numeral(ticketPrice).format("0,0");
     const formattedQuantity = numeral(quantity).format("0,0");
+    const formattedQuantityDouble = numeral(quantityDouble).format("0,0");
     const formattedPriceDouble = numeral(ticketPriceDouble).format("0,0");
+    const formattedPriceBack = numeral(ticketPriceBack).format("0,0");
+    const formattedQuantityBack = numeral(quantityBack).format("0,0");
+    const formattedQuantityDoubleBack = numeral(quantityDoubleBack).format("0,0");
+    const formattedPriceDoubleBack = numeral(ticketPriceDoubleBack).format("0,0");
+
     const totalPrice =
       numeral(ticketPrice).value() * numeral(quantity).value() +
-      numeral(ticketPriceDouble).value() * numeral(quantityDouble).value();
+      numeral(ticketPriceDouble).value() * numeral(quantityDouble).value() + 
+      numeral(ticketPriceBack).value() * numeral(quantityBack).value() +
+      numeral(ticketPriceDoubleBack).value() * numeral(quantityDoubleBack).value() 
 
     // Tính toán và format cho các trường thanh toán
     const formattedTransfer = numeral(transfer).format("0,0");
     const formattedCash = numeral(cash).format("0,0");
     const formattedGarageCollection = numeral(garageCollection).format("0,0");
-
+ 
     // Tính toán còn lại
     const remaining =
       totalPrice -
@@ -748,23 +780,124 @@ const Tables = () => {
       ticketPriceDouble: formattedPriceDouble,
       ticketPrice: formattedPrice,
       quantity: formattedQuantity,
+      quantityDouble: formattedQuantityDouble,
       total: numeral(totalPrice).format("0,0"),
+      ticketPriceBack : formattedPriceBack,
+      ticketPriceDoubleBack : formattedPriceDoubleBack,
+      quantityBack : formattedQuantityBack,
+      quantityDoubleBack : formattedQuantityDoubleBack,
       transfer: formattedTransfer,
       cash: formattedCash,
       garageCollection: formattedGarageCollection,
       remaining: numeral(remaining).format("0,0"), // Cập nhật giá trị còn lại
+     
     });
+  }; 
+  
+  
+  const handleCombinedChange = (_, allValues) => {
+    // Logic để xác định khi nào cần cập nhật điểm đón và trả dựa trên việc người dùng thay đổi hãng xe hoặc chuyến đi
+    const busOrTripChanged = _.busCompany || _.trip; // Chỉ kiểm tra sự thay đổi từ hãng xe hoặc chuyến đi
+    const pickupOrDropoffChanged = _.hasOwnProperty('pickuplocation') || _.hasOwnProperty('paylocation'); // Kiểm tra sự thay đổi trực tiếp từ điểm đón hoặc điểm trả
+  
+    
+    
+    if (busOrTripChanged) {
+      const { busCompany, trip } = allValues;
+      let newPickups = [], newDropoffs = [];
+  
+      // Logic để cập nhật dựa trên thông tin từ hãng xe và chuyến đi
+      if (busCompaniesInfo[busCompany] && busCompaniesInfo[busCompany][trip]) {
+        const info = busCompaniesInfo[busCompany][trip];
+        newPickups = trip === "SÀI GÒN - ĐÀ LẠT" ? info.pickups : info.dropoffs;
+        newDropoffs = trip === "SÀI GÒN - ĐÀ LẠT" ? info.dropoffs : info.pickups;
+  
+        form.setFieldsValue({
+          pickuplocation: newPickups.length > 0 ? newPickups[0] : '',
+          paylocation: newDropoffs.length > 0 ? newDropoffs[0] : '',
+          pickuplocationBack: newDropoffs.length > 0 ? newDropoffs[0] : '',
+          paylocationBack: newPickups.length > 0 ? newPickups[0] : '',
+          
+        });
+      }
+    }
+  
+    // Xử lý khi có sự thay đổi trực tiếp từ điểm đón hoặc điểm trả
+    if (pickupOrDropoffChanged) {
+      // Cập nhật điểm đón và trả cho vé về dựa trên sự thay đổi
+      form.setFieldsValue({
+        pickuplocationBack: allValues.paylocation, // Gán điểm đón vé về bằng điểm trả hiện tại
+        paylocationBack: allValues.pickuplocation, // Gán điểm trả vé về bằng điểm đón hiện tại
+      });
+    }
+  
+    // Đảm bảo rằng logic để format tiền tệ và các thay đổi khác vẫn được gọi
+    handleValueChange(_, allValues);
   };
- 
+  
+
+
+
+
+  const busCompaniesInfo = {
+    "AA": {
+      "SÀI GÒN - ĐÀ LẠT": {
+        pickups: [ "526 An Dương Vương, P9, Quận 5, HCM"],
+        dropoffs: ["4C Yersin, Phường 10, TP Đà Lạt"]
+      }
+    },
+    "LV" :{
+      "SÀI GÒN - ĐÀ LẠT" : {
+        pickups : [ "152 Chu Văn An, P26, Bình Thạnh HCM"],
+        dropoffs : [" 14 Đống Đa, Phường 3, TP Đà Lạt"]
+      }
+    },
+    "TQĐ" :{
+      "SÀI GÒN - ĐÀ LẠT" : {
+        pickups : ["Bến xe An Sương, QL22, Hóc Môn, HCM"],
+        dropoffs : ["263 Mai Anh Đào, Phường 8, TP Đà Lạt"]
+      }
+    },
+    "LH" :{
+      "SÀI GÒN - ĐÀ LẠT" : {
+        pickups : [],
+        dropoffs : ["D11 KQH Hoàng Diệu, Phường 5, TP Đà Lạt"]
+      }
+    },
+    "KT" :{
+      "SÀI GÒN - ĐÀ LẠT" : {
+        pickups : [],
+        dropoffs : ["16 Phan Chu Trinh, Phường 9, TP Đà Lạt"]
+      }
+    },
+    "PP" :{
+      "SÀI GÒN - ĐÀ LẠT" : {
+        pickups : ["522 Hoàng Văn Thụ, P4, Quận Tân Bình, HCM" , "522 Hoàng Văn Thụ, P4, Quận Tân Bình, HCM"],
+        dropoffs : ["20C đường 3/4, Phường 3, TP Đà Lạt"]
+      }
+    },
+   
+  };
+
+
+  const [dateRange, setDateRange] = useState([
+  moment(), // Ngày bắt đầu (ngày hiện tại)
+  moment(), // Ngày kết thúc (ngày hiện tại)
+]);
+
+
   return (
     <>
+    {isLoading && <Loading />}
       <div className="flex items-center justify-between py-4">
-        <DatePicker
-          picker="month"
-          value={currentMonthYear}
-          onChange={handleMonthYearChange}
-          format="MM/YYYY"
-        />
+      <RangePicker
+ 
+  format="YYYY-MM-DD"
+  onChange={(dates, dateStrings) => {
+    setDateRange(dates);
+    getData(dateStrings[0], dateStrings[1]);
+  }}
+/>
         <h1 className="text-[30px] font-bold text-[#ff0000]">
           BẢNG ĐƠN ĐẶT VÉ XE CỦA {name}
         </h1>
@@ -772,111 +905,91 @@ const Tables = () => {
           Tạo đơn
         </Button>
       </div>
-      <Table
-        columns={columns}
-        dataSource={dataBooking}
-        pagination={{ pageSize: 10000 }}
-        scroll={{ x: "max-content" }}
-        
-        rowClassName={(record) => (record.isPayment ? "" : "unpaid-row")}
-        summary={() => (
-          <Table.Summary.Row
-            style={{
-              backgroundColor: "#52c41a", // Màu xanh của thành công, màu Ant Design success color
-              fontWeight: "bold", // Chữ đậm
-              color: "yellow", // Màu chữ trắng
-              fontSize: "16px", // Cỡ chữ lớn
-            }}
-          >
-            <Table.Summary.Cell index={0}>Tổng</Table.Summary.Cell>
-            <Table.Summary.Cell index={1}></Table.Summary.Cell>
-            <Table.Summary.Cell index={2}></Table.Summary.Cell>
-            <Table.Summary.Cell index={3}></Table.Summary.Cell>
-            <Table.Summary.Cell index={4}></Table.Summary.Cell>
-            <Table.Summary.Cell index={5}></Table.Summary.Cell>
-            <Table.Summary.Cell index={6}></Table.Summary.Cell>
-            <Table.Summary.Cell index={7}></Table.Summary.Cell>
-            <Table.Summary.Cell index={8}></Table.Summary.Cell>
-            <Table.Summary.Cell index={9}></Table.Summary.Cell>
-            <Table.Summary.Cell index={10}></Table.Summary.Cell>
-            <Table.Summary.Cell index={11}></Table.Summary.Cell>
-            <Table.Summary.Cell index={12}>
-              {" "}
-              {formatCurrency(totals.ticketPrice)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={13}>
-              {" "}
-              {totals.quantity}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={14}>
-              {formatCurrency(totals.ticketPriceDouble)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={15}>
-              {totals.quantityDouble}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={16}>
-              {formatCurrency(totals.total)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={17}>
-              {formatCurrency(totals.cash)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={18}>
-              {formatCurrency(totals.transfer)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={19}>
-              {formatCurrency(totals.garageCollection)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={20}>
-              {formatCurrency(totals.remaining)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={21}></Table.Summary.Cell>
-            <Table.Summary.Cell index={22}></Table.Summary.Cell>
-            <Table.Summary.Cell index={23}></Table.Summary.Cell>
-          </Table.Summary.Row>
-        )}
-      />
+    
+   
+    <Table
+      
+      columns={columns}
+      dataSource={dataBooking}
+      pagination={{ pageSize: 10 }}
+      scroll={{ x: "max-content" }}
+      
+      
+      rowClassName={(record) => (record.isPayment ? "" : "unpaid-row")}
+      summary={() => (
+        <Table.Summary.Row
+          style={{
+            backgroundColor: "#52c41a", // Màu xanh của thành công, màu Ant Design success color
+            fontWeight: "bold", // Chữ đậm
+            color: "yellow", // Màu chữ trắng
+            fontSize: "16px", // Cỡ chữ lớn
+          }}
+        >
+          <Table.Summary.Cell index={0}>Tổng</Table.Summary.Cell>
+          <Table.Summary.Cell index={1}></Table.Summary.Cell>
+          <Table.Summary.Cell index={2}></Table.Summary.Cell>
+          <Table.Summary.Cell index={3}></Table.Summary.Cell>
+          <Table.Summary.Cell index={4}></Table.Summary.Cell>
+          <Table.Summary.Cell index={5}></Table.Summary.Cell>
+          <Table.Summary.Cell index={6}></Table.Summary.Cell>
+          <Table.Summary.Cell index={7}></Table.Summary.Cell>
+          <Table.Summary.Cell index={8}></Table.Summary.Cell>
+          <Table.Summary.Cell index={9}></Table.Summary.Cell>
+          <Table.Summary.Cell index={10}>{formatCurrency(totals.ticketPrice)}</Table.Summary.Cell>
+          <Table.Summary.Cell index={11}>{totals.quantity} </Table.Summary.Cell>
+          <Table.Summary.Cell index={12}>
+            {formatCurrency(totals.ticketPriceDouble)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={13}>
+          {totals.quantityDouble}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={14}>
+          {formatCurrency(totals.total)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={15}>
+          {formatCurrency(totals.cash)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={16}>
+          {formatCurrency(totals.transfer)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={17}>
+          {formatCurrency(totals.garageCollection)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={18}>
+          {formatCurrency(totals.remaining)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={19}>
+           
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={20}>
+           
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={21}></Table.Summary.Cell>
+          <Table.Summary.Cell index={22}></Table.Summary.Cell>
+         
+        </Table.Summary.Row>
+      )}
+    />
 
+    
+    
       <Modal
         title="Hoàn vé"
         visible={isRefundModalOpen}
         onCancel={handleRefundCancel}
         footer={null}
       >
-        <Form form={form} onFinish={onRefundFinish} layout="vertical">
-          <Form.Item
-            name="refundPercentage"
-            label="Chọn tỷ lệ % hoàn vé (Loại vé thường)"
-            rules={[
-              { required: true, message: "Vui lòng chọn tỷ lệ % hoàn vé!" },
-            ]}
-          >
-            <Select>
-              <Select.Option value="0">0%</Select.Option>
-              <Select.Option value="10">10%</Select.Option>
-              <Select.Option value="20">20%</Select.Option>
-              <Select.Option value="50">50%</Select.Option>
-              <Select.Option value="100">100%</Select.Option>
-            </Select>
+        <Form form={form}  onValuesChange={handleValueChangeRefund}  onFinish={onRefundFinish} layout="vertical">
+        <Form.Item name='refundAmount' label="Nhập số tiền hoàn của đơn này">
+            <Input placeholder="Nhập số tiền hoàn của đơn này"/>
           </Form.Item>
-
-          {/* Thêm trường mới cho tỷ lệ % hoàn vé loại vé Double */}
-          <Form.Item
-            name="refundPercentageDouble"
-            label="Chọn tỷ lệ % hoàn vé (Loại vé Đôi)"
-            rules={[
-              {
-                required: true,
-                message: "Vui lòng chọn tỷ lệ % hoàn vé cho vé Đôi!",
-              },
-            ]}
-          >
-            <Select>
-              <Select.Option value="0">0%</Select.Option>
-              <Select.Option value="10">10%</Select.Option>
-              <Select.Option value="20">20%</Select.Option>
-              <Select.Option value="50">50%</Select.Option>
-              <Select.Option value="100">100%</Select.Option>
-            </Select>
+          <Form.Item name='bank' label="Số tài khoản">
+          <TextArea rows={4} placeholder="Nhập số tài khoản" />
+           
+          </Form.Item>
+          <Form.Item name='season' label="Lý do">
+          <TextArea rows={4} placeholder="Nhập Lý do" />
+           
           </Form.Item>
 
           <Form.Item>
@@ -897,7 +1010,7 @@ const Tables = () => {
         <Form
           form={form}
           onFinish={onFinish}
-          onValuesChange={handleValueChange}
+          onValuesChange={handleCombinedChange}
           layout="vertical"
         >
           <Row gutter={[16, 16]}>
@@ -910,15 +1023,129 @@ const Tables = () => {
                 />
               </Form.Item>
             </Col>
-
+            <Col span={8}>
+              <Form.Item name="trip" label="Chuyến đi">
+                <Select style={{ width: "100%" }}>
+                  <Option value="SÀI GÒN - ĐÀ LẠT">SÀI GÒN - ĐÀ LẠT</Option>
+                  <Option value="ĐÀ LẠT - SÀI GÒN">ĐÀ LẠT - SÀI GÒN</Option>
+                 
+                  <Option value="BÌNH DƯƠNG - ĐÀ LẠT">
+                    BÌNH DƯƠNG - ĐÀ LẠT
+                  </Option>
+                  <Option value="NHA TRANG - ĐÀ LẠT">NHA TRANG - ĐÀ LẠT</Option>
+                  <Option value="NHÀ TRANG - SÀI GÒN">
+                    NHÀ TRANG - SÀI GÒN
+                  </Option>
+               
+                  <Option value="ĐÀ LẠT - BÌNH DƯƠNG">
+                    ĐÀ LẠT - BÌNH DƯƠNG
+                  </Option>
+                  <Option value="ĐÀ LẠT - NHA TRANG">ĐÀ LẠT - NHA TRANG</Option>
+                  <Option value="SÀI GÒN - NHA TRANG">
+                    SÀI GÒN - NHA TRANG
+                  </Option>
+                </Select>
+              </Form.Item>
+            </Col>
             <Col span={8}>
               <Form.Item name="dateGo" label="Ngày đi">
                 <DatePicker style={{ width: "100%" }} />
               </Form.Item>
             </Col>
+
+            <Col span={8}>
+            <Form.Item
+              name="roundTrip"
+              label="Khứ hồi"
+              valuePropName="checked"
+            >
+            <Switch onChange={(checked) => setIsRoundTrip(checked)} />
+            </Form.Item>
+            </Col>
+
+          
+
+            <Col span={8} >
+              {/* <Form.Item name="tripBack" label="Chuyến về"  className={isRoundTrip ? "" : "hidden"}>
+                <Select style={{ width: "100%" }}>
+                  <Option value="SÀI GÒN - ĐÀ LẠT">SÀI GÒN - ĐÀ LẠT</Option>
+                  <Option value="ĐÀ LẠT - SÀI GÒN">ĐÀ LẠT - SÀI GÒN</Option>
+                 
+                  <Option value="BÌNH DƯƠNG - ĐÀ LẠT">
+                    BÌNH DƯƠNG - ĐÀ LẠT
+                  </Option>
+                  <Option value="NHA TRANG - ĐÀ LẠT">NHA TRANG - ĐÀ LẠT</Option>
+                  <Option value="NHÀ TRANG - SÀI GÒN">
+                    NHÀ TRANG - SÀI GÒN
+                  </Option>
+               
+                  <Option value="ĐÀ LẠT - BÌNH DƯƠNG">
+                    ĐÀ LẠT - BÌNH DƯƠNG
+                  </Option>
+                  <Option value="ĐÀ LẠT - NHA TRANG">ĐÀ LẠT - NHA TRANG</Option>
+                  <Option value="SÀI GÒN - NHA TRANG">
+                    SÀI GÒN - NHA TRANG
+                  </Option>
+                </Select>
+              </Form.Item> */}
+            </Col>   
+            <Col span={8}>
+            <Form.Item name="dateBack" label="Ngày về"  className={isRoundTrip ? "" : "hidden"}>
+                <DatePicker style={{ width: "100%" }} />
+              </Form.Item>
+            </Col> 
+
+
+
             <Col span={8}>
               <Form.Item name="timeStart" label="Giờ đi">
                 <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="seats" label="Ghế Đi">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="customerName" label="Họ tên khách">
+                <Input />
+              </Form.Item>
+            </Col>
+
+
+
+            <Col span={8}>
+              <Form.Item name="timeBack" label="Giờ về"  className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="seatsBack" label="Ghế về"  className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+            </Col>
+
+            <Col span={8}>
+              <Form.Item name="phoneNumber" label="Số điện thoại khách">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="busCompany" label="Hãng xe">
+                <Select
+                  
+                  style={{ width: "100%" }}
+                >
+                  <Option value="AA">AA</Option>
+                  <Option value="LV">LV</Option>
+                  <Option value="LH">LH</Option>
+                  <Option value="TQĐ">TQĐ</Option>
+                  <Option value="PP">PP</Option>
+                  <Option value="KT">KT</Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -940,43 +1167,16 @@ const Tables = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="customerName" label="Họ tên khách">
-                <Input />
-              </Form.Item>
             </Col>
+
+
+
+
+
             <Col span={8}>
-              <Form.Item name="phoneNumber" label="Số điện thoại khách">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="trip" label="Chuyến đi">
-                <Select style={{ width: "100%" }}>
-                  <Option value="Sài Gòn - Đà Lạt">Sài Gòn - Đà Lạt</Option>
-                  <Option value="Vũng Tàu - Đà Lạt">Vũng Tàu - Đà Lạt</Option>
-                  <Option value="Bình Dương - Đà Lạt">
-                    Bình Dương - Đà Lạt
-                  </Option>
-                  <Option value="Nha Trang - Đà Lạt">Nha Trang - Đà Lạt</Option>
-                  <Option value="Nha Trang - Sài Gòn">
-                    Nha Trang - Sài Gòn
-                  </Option>
-                  <Option value="Đà Lạt - Sài Gòn">Đà Lạt - Sài Gòn</Option>
-                  <Option value="Đà Lạt - Vũng Tàu">Đà Lạt - Vũng Tàu</Option>
-                  <Option value="Đà Lạt - Bình Dương">
-                    Đà Lạt - Bình Dương
-                  </Option>
-                  <Option value="Đà Lạt - Nha Trang">Đà Lạt - Nha Trang</Option>
-                  <Option value="Sài Gòn - Nha Trang">
-                    Sài Gòn - Nha Trang
-                  </Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="busCompany" label="Hãng xe">
+              <Form.Item name="busCompanyBack" label="Hãng xe về"  className={isRoundTrip ? "" : "hidden"}>
                 <Select
-                  onChange={handleBusCompanyChange}
+                  
                   style={{ width: "100%" }}
                 >
                   <Option value="AA">AA</Option>
@@ -988,11 +1188,6 @@ const Tables = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item name="seats" label="Số Ghế">
-                <Input />
-              </Form.Item>
-            </Col>
             <Col span={12}>
               <Form.Item name="quantity" label="Số lượng giường đơn">
                 <Input />
@@ -1000,7 +1195,7 @@ const Tables = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="ticketPrice" label="Đơn giá giường đơn">
-                <Input />
+                <Input  />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -1013,17 +1208,56 @@ const Tables = () => {
                 <Input />
               </Form.Item>
             </Col>
+
+            <Col span={12}>
+              <Form.Item name="quantityBack" label="Số lượng giường đơn vé về"  className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ticketPriceBack" label="Đơn giá giường đơn vé về"   className={isRoundTrip ? "" : "hidden"}>
+                <Input  />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="quantityDoubleBack" label="Số lượng giường đôi vé về"   className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ticketPriceDoubleBack" label="Đơn giá giường đôi vé về"   className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+
+
+
             <Col span={12}>
   <Form.Item name="pickuplocation" label="Điểm đón">
     <Input placeholder="Nhập điểm đón" />
   </Form.Item>
-</Col>
-
-<Col span={12}>
+            </Col>
+            <Col span={12}>
   <Form.Item name="paylocation" label="Điểm trả">
     <Input placeholder="Nhập điểm trả" />
   </Form.Item>
-</Col>
+            </Col>
+
+
+
+
+            
+            <Col span={12}>
+  <Form.Item name="pickuplocationBack" label="Điểm đón vé về"  className={isRoundTrip ? "" : "hidden"}>
+    <Input placeholder="Nhập điểm đón vé về" />
+  </Form.Item>
+            </Col>
+            <Col span={12}>
+  <Form.Item name="paylocationBack" label="Điểm trả vé về"  className={isRoundTrip ? "" : "hidden"}>
+    <Input placeholder="Nhập điểm trả về" />
+  </Form.Item>
+            </Col>
+
 
             <Col span={12}>
               <Form.Item name="transfer" label="Chuyển khoản">
@@ -1094,16 +1328,44 @@ const Tables = () => {
         footer={null}
         width={800}
       >
-        <Form
+          <Form
           form={form}
-          onValuesChange={handleValueChange}
           onFinish={onEditFinish}
+          onValuesChange={handleCombinedChange}
           layout="vertical"
         >
           <Row gutter={[16, 16]}>
             <Col span={8}>
               <Form.Item name="date" label="Ngày đặt">
-                <DatePicker disabled style={{ width: "100%" }} />
+                <DatePicker
+                  style={{ width: "100%" }}
+                  defaultValue={dayjs()}
+                  disabled
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="trip" label="Chuyến đi">
+                <Select style={{ width: "100%" }}>
+                  <Option value="SÀI GÒN - ĐÀ LẠT">SÀI GÒN - ĐÀ LẠT</Option>
+                  <Option value="ĐÀ LẠT - SÀI GÒN">ĐÀ LẠT - SÀI GÒN</Option>
+                 
+                  <Option value="BÌNH DƯƠNG - ĐÀ LẠT">
+                    BÌNH DƯƠNG - ĐÀ LẠT
+                  </Option>
+                  <Option value="NHA TRANG - ĐÀ LẠT">NHA TRANG - ĐÀ LẠT</Option>
+                  <Option value="NHÀ TRANG - SÀI GÒN">
+                    NHÀ TRANG - SÀI GÒN
+                  </Option>
+               
+                  <Option value="ĐÀ LẠT - BÌNH DƯƠNG">
+                    ĐÀ LẠT - BÌNH DƯƠNG
+                  </Option>
+                  <Option value="ĐÀ LẠT - NHA TRANG">ĐÀ LẠT - NHA TRANG</Option>
+                  <Option value="SÀI GÒN - NHA TRANG">
+                    SÀI GÒN - NHA TRANG
+                  </Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -1111,9 +1373,101 @@ const Tables = () => {
                 <DatePicker style={{ width: "100%" }} />
               </Form.Item>
             </Col>
+
+            <Col span={8}>
+            <Form.Item
+              name="roundTrip"
+              label="Khứ hồi"
+              valuePropName="checked"
+              
+            >
+            <Switch  onChange={(checked) => setIsRoundTrip(checked)} />
+            </Form.Item>
+            </Col>
+
+          
+
+            <Col span={8} >
+              {/* <Form.Item name="tripBack" label="Chuyến về"  className={isRoundTrip ? "" : "hidden"}>
+                <Select style={{ width: "100%" }}>
+                  <Option value="SÀI GÒN - ĐÀ LẠT">SÀI GÒN - ĐÀ LẠT</Option>
+                  <Option value="ĐÀ LẠT - SÀI GÒN">ĐÀ LẠT - SÀI GÒN</Option>
+                 
+                  <Option value="BÌNH DƯƠNG - ĐÀ LẠT">
+                    BÌNH DƯƠNG - ĐÀ LẠT
+                  </Option>
+                  <Option value="NHA TRANG - ĐÀ LẠT">NHA TRANG - ĐÀ LẠT</Option>
+                  <Option value="NHÀ TRANG - SÀI GÒN">
+                    NHÀ TRANG - SÀI GÒN
+                  </Option>
+               
+                  <Option value="ĐÀ LẠT - BÌNH DƯƠNG">
+                    ĐÀ LẠT - BÌNH DƯƠNG
+                  </Option>
+                  <Option value="ĐÀ LẠT - NHA TRANG">ĐÀ LẠT - NHA TRANG</Option>
+                  <Option value="SÀI GÒN - NHA TRANG">
+                    SÀI GÒN - NHA TRANG
+                  </Option>
+                </Select>
+              </Form.Item> */}
+            </Col>   
+            <Col span={8}>
+            <Form.Item name="dateBack" label="Ngày về"  className={isRoundTrip ? "" : "hidden"}>
+                <DatePicker style={{ width: "100%" }} />
+              </Form.Item>
+            </Col> 
+
+
+
             <Col span={8}>
               <Form.Item name="timeStart" label="Giờ đi">
                 <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="seats" label="Ghế Đi">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="customerName" label="Họ tên khách">
+                <Input />
+              </Form.Item>
+            </Col>
+
+
+
+            <Col span={8}>
+              <Form.Item name="timeBack" label="Giờ về"  className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="seatsBack" label="Ghế về"  className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+            </Col>
+
+            <Col span={8}>
+              <Form.Item name="phoneNumber" label="Số điện thoại khách">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="busCompany" label="Hãng xe">
+                <Select
+                  
+                  style={{ width: "100%" }}
+                >
+                  <Option value="AA">AA</Option>
+                  <Option value="LV">LV</Option>
+                  <Option value="LH">LH</Option>
+                  <Option value="TQĐ">TQĐ</Option>
+                  <Option value="PP">PP</Option>
+                  <Option value="KT">KT</Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -1135,36 +1489,25 @@ const Tables = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="customerName" label="Họ tên khách">
-                <Input />
-              </Form.Item>
             </Col>
+
+
+
+
+
             <Col span={8}>
-              <Form.Item name="phoneNumber" label="Số điện thoại khách">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="trip" label="Chuyến đi">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="busCompany" label="Hãng xe">
-                <Select style={{ width: "100%" }}>
+              <Form.Item name="busCompanyBack" label="Hãng xe về"  className={isRoundTrip ? "" : "hidden"}>
+                <Select
+                  
+                  style={{ width: "100%" }}
+                >
                   <Option value="AA">AA</Option>
                   <Option value="LV">LV</Option>
-                  <Option value="ĐL">ĐL</Option>
                   <Option value="LH">LH</Option>
                   <Option value="TQĐ">TQĐ</Option>
-                  <Option value="NK">NK</Option>
-                  <Option value="NXM">NXM</Option>
+                  <Option value="PP">PP</Option>
+                  <Option value="KT">KT</Option>
                 </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="seats" label="Số Ghế">
-                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -1174,7 +1517,7 @@ const Tables = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="ticketPrice" label="Đơn giá giường đơn">
-                <Input />
+                <Input  />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -1187,18 +1530,56 @@ const Tables = () => {
                 <Input />
               </Form.Item>
             </Col>
+
+            <Col span={12}>
+              <Form.Item name="quantityBack" label="Số lượng giường đơn vé về"  className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ticketPriceBack" label="Đơn giá giường đơn vé về"   className={isRoundTrip ? "" : "hidden"}>
+                <Input  />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="quantityDoubleBack" label="Số lượng giường đôi vé về"   className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ticketPriceDoubleBack" label="Đơn giá giường đôi vé về"   className={isRoundTrip ? "" : "hidden"}>
+                <Input />
+              </Form.Item>
+            </Col>
+
+
+
             <Col span={12}>
   <Form.Item name="pickuplocation" label="Điểm đón">
     <Input placeholder="Nhập điểm đón" />
   </Form.Item>
-</Col>
-
-<Col span={12}>
+            </Col>
+            <Col span={12}>
   <Form.Item name="paylocation" label="Điểm trả">
     <Input placeholder="Nhập điểm trả" />
   </Form.Item>
-</Col>
+            </Col>
+
+
+
+
             
+            <Col span={12}>
+  <Form.Item name="pickuplocationBack" label="Điểm đón vé về"  className={isRoundTrip ? "" : "hidden"}>
+    <Input placeholder="Nhập điểm đón vé về" />
+  </Form.Item>
+            </Col>
+            <Col span={12}>
+  <Form.Item name="paylocationBack" label="Điểm trả vé về"  className={isRoundTrip ? "" : "hidden"}>
+    <Input placeholder="Nhập điểm trả về" />
+  </Form.Item>
+            </Col>
+
 
             <Col span={12}>
               <Form.Item name="transfer" label="Chuyển khoản">
@@ -1217,20 +1598,12 @@ const Tables = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="remaining" label="Còn lại">
-                <Input disabled addon addonAfter="VNĐ" />
+                <Input disabled addonAfter="VNĐ" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="total" label="Tổng cộng">
-                <Input
-                  disabled
-                  addonAfter="VNĐ"
-                  value={
-                    form.getFieldValue("total")
-                      ? form.getFieldValue("total").toLocaleString()
-                      : ""
-                  }
-                />
+                <Input disabled addonAfter="VNĐ" />
               </Form.Item>
             </Col>
 
@@ -1262,7 +1635,7 @@ const Tables = () => {
             <Col>
               <Form.Item>
                 <Button type="primary" htmlType="submit">
-                  Lưu
+                  Tạo đơn
                 </Button>
               </Form.Item>
             </Col>
