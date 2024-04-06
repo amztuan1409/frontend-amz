@@ -345,12 +345,38 @@ const Marketplace = () => {
     setFilteredData(data);
   };
 
+  const formatDateString = (dateString) => {
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    return `${day < 10 ? '0' + day : day}/${month < 10 ? '0' + month : month}/${year}`;
+};
   const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(filteredData);
+    // Loại bỏ trường _id từ mỗi đối tượng trong filteredData
+    const filteredDataFormatted = filteredData.map(item => {
+      const { _id, date, dateGo, dateBack, ...rest } = item;
+      return {
+          ...rest,
+          date: formatDateString(date),
+          dateGo: formatDateString(dateGo),
+          dateBack: formatDateString(dateBack)
+      };
+  });
+
+    // Chuyển đổi mảng đã lọc thành một worksheet Excel
+    const worksheet = XLSX.utils.json_to_sheet(filteredDataFormatted);
+
+    // Tạo một workbook mới
     const workbook = XLSX.utils.book_new();
+
+    // Thêm worksheet vào workbook với tên là "Bookings"
     XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+
+    // Ghi workbook ra tệp "bookings.xlsx"
     XLSX.writeFile(workbook, "bookings.xlsx");
-  };
+};
+
   const busCompaniesInfo = {
     "AA": {
       "SÀI GÒN - ĐÀ LẠT": {
@@ -709,189 +735,7 @@ const Marketplace = () => {
   }}
 />
 
-      {/* <Modal
-        title="Chỉnh sửa đặt vé"
-        visible={isEditModalOpen}
-        onCancel={handleEditCancel}
-        footer={null}
-        width={800}
-      >
-        <Form
-          form={form}
-          onValuesChange={handleValueChange}
-          onFinish={onEditFinish}
-          layout="vertical"
-        >
-          <Row gutter={[16, 16]}>
-            <Col span={8}>
-              <Form.Item name="date" label="Ngày đặt">
-                <DatePicker disabled style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="dateGo" label="Ngày đi">
-                <DatePicker style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="timeStart" label="Giờ đi">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="bookingSource" label="Nguồn đặt">
-                <Select style={{ width: "100%" }}>
-                  <Option value="ZL428">ZL428</Option>
-                  <Option value="ZL200">ZL200</Option>
-                  <Option value="ZL232">ZL232</Option>
-                  <Option value="ZL978">ZL978</Option>
-                  <Option value="PD">PD</Option>
-                  <Option value="LM">LM</Option>
-                  <Option value="ZLOA">ZLOA</Option>
-                  <Option value="AMZ">AMZ</Option>
-                  <Option value="VN">VN</Option>
-                  <Option value="COM">COM</Option>
-                  <Option value="DT">DT</Option>
-                  <Option value="HL">HL</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="customerName" label="Họ tên khách">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="phoneNumber" label="Số điện thoại khách">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="trip" label="Chuyến đi">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="busCompany" label="Hãng xe">
-                <Select style={{ width: "100%" }}>
-                  <Option value="AA">AA</Option>
-                  <Option value="LV">LV</Option>
-                  <Option value="ĐL">ĐL</Option>
-                  <Option value="LH">LH</Option>
-                  <Option value="TQĐ">TQĐ</Option>
-                  <Option value="NK">NK</Option>
-                  <Option value="NXM">NXM</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="seats" label="Số Ghế">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="quantity" label="Số lượng giường đơn">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="ticketPrice" label="Đơn giá giường đơn">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="quantityDouble" label="Số lượng giường đôi">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="ticketPriceDouble" label="Đơn giá giường đôi">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-  <Form.Item name="pickuplocation" label="Điểm đón">
-    <Input placeholder="Nhập điểm đón" />
-  </Form.Item>
-</Col>
-
-<Col span={12}>
-  <Form.Item name="paylocation" label="Điểm trả">
-    <Input placeholder="Nhập điểm trả" />
-  </Form.Item>
-</Col>
-            
-
-            <Col span={12}>
-              <Form.Item name="transfer" label="Chuyển khoản">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="cash" label="Tiền mặt">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="garageCollection" label="Nhà xe thu">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="remaining" label="Còn lại">
-                <Input disabled addon addonAfter="VNĐ" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="total" label="Tổng cộng">
-                <Input
-                  disabled
-                  addonAfter="VNĐ"
-                  value={
-                    form.getFieldValue("total")
-                      ? form.getFieldValue("total").toLocaleString()
-                      : ""
-                  }
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                name="isPayment"
-                label="Trạng thái thanh toán"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row className="py-4">
-            <Col span={24}>
-              <Form.Item label="Ghi chú của khách hàng" name="note">
-                <TextArea rows={4} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row className="pb-4">
-            <Col span={24}>
-              <Form.Item label="Thông tin chuyển khoản" name="deposit">
-                <TextArea rows={4} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row justify="end">
-            <Col>
-              <Form.Item>
-                <Button type="primary" htmlType="submit">
-                  Lưu
-                </Button>
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal> */}
-
+  
       <Modal
         title="Chỉnh sửa đặt vé"
         visible={isEditModalOpen}
